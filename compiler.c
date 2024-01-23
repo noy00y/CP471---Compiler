@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#define BUFFER_SIZE 2048
 
 // Define token types
 typedef enum {
@@ -29,7 +30,12 @@ typedef struct {
 FILE *inputFile;
 FILE *tokenFile;
 FILE *errorFile;
-char buffer[2048]; // Double buffer
+
+// Double Buffers
+char buffer1[BUFFER_SIZE]; 
+char buffer2[BUFFER_SIZE];
+char *currentBuffer;
+size_t bytesRead;
 
 // Function to read the next character from the input file
 char getNextChar() {
