@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-
 /*Constants and Global Declarations:*/ 
 #define BUFFER_SIZE 2048
 FILE *inputFile;
@@ -14,7 +13,7 @@ char buffer1[BUFFER_SIZE]; // Buffers for reading file
 char buffer2[BUFFER_SIZE];
 char *currentBuffer; // current buffer being read
 
-int keywords[30]; // store keywords
+char *keywords[30]; // store keywords
 int** table; // store transition table
 
 /*Functions*/
@@ -31,9 +30,9 @@ void generateKeywords() {
     int i = 0;
     while (fgets(currentBuffer, BUFFER_SIZE, file) != NULL) {
         val = currentBuffer;
-        keywords[i] = currentBuffer;
+        keywords[i] = val;
+        // printf("%s", keywords[i]);
         i++;
-        printf(val);
 
         // Swap Buffers:
         if (currentBuffer == buffer1) { currentBuffer = buffer2;}
@@ -42,22 +41,35 @@ void generateKeywords() {
     fclose(file);
 }
 
+void generateKeywords() {
+    FILE *file = fopen("table.txt", "r");
+    if (file == NULL) {
+        printf("Error opening file");
+        return 1;
+    }    
+    fclose(file);
+}
+
 // Driver Code:
 int main() {
 
-    // Open files
-    // inputFile = fopen("input.cp", "r");
-    // tokenFile = fopen("tokens.txt", "w");
-    // errorFile = fopen("errors.txt", "w");
+    // Open files --> input file (to compile), tokenFile (symbol table), errorFile
+    char inputFName[100];
+    printf("Enter path of file to compile: ");
+    scanf("%s", inputFName);
+    inputFile = fopen(inputFName, "r");
 
-    // if (inputFile == NULL || tokenFile == NULL || errorFile == NULL) {
-    //     printf("Error opening files\n");
-    //     return 1;
-    // }
+    tokenFile = fopen("tokens.txt", "w");
+    errorFile = fopen("errors.txt", "w");
+
+    if (inputFile == NULL || tokenFile == NULL || errorFile == NULL) {
+        printf("Error opening files\n");
+        return 1;
+    }
     
     // Generate Keywords and Table:
     generateKeywords();
-    // generateTable();
+    generateTTable();
 
     return 0;
 }
