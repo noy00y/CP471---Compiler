@@ -1,16 +1,33 @@
 state, input, next state (stored as value) 
 // accept = 100, reject = 99, other = 50
+0, 60, 1    // <
+1, 61, 2    // <= (accept)
+1, 62, 3    // <> (accept)
+1, 50, 4    // <* (accept)
+
+0, 61, 5    // =  (accept)
+
+0, 62, 6    // >  
+6, 61, 7    // >= (accept)
+6, 50, 8    // >* (accept)
+
 0, 48, 13    // digit
+
 13, 48, 13   // digit repeating
 13, 50, 20   // digit|other (accept)
 13, 46, 14   // digit|.
+
 14, 48, 15   // digit|.|digit
+
 15, 48, 15   // digit|.|digit repeating
 15, 50, 21   // digit|.|digit|other (accept)
 15, 69, 16   // digit|.|digit|E
+
 16, 43, 17   // digit|.|digit|E|+
 16, 45, 17   // digit|.|digit|E|-
 16, 48, 18   // digit|.|digit|E|digit
+
 17, 48, 18   // digit|.|digit|E|+/-|digit
+
 18, 48, 18   // digit|.|digit|E|...|digit (repeating)
-18, 50, 19   // digit|.|digit|E|...|digit|other (accept)
+18, 50, 19   // digit|.|digit|E|...|digit|other (accept) 
