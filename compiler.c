@@ -10,10 +10,24 @@ FILE *tokenFile;
 FILE *errorFile;
 
 char* keywords[30]; // Define keywords globally
-int** table; // store transition table
+int table[20][100] = {0}; // initalize transition table w/ 0
 char buffer1[BUFFER_SIZE];
 char buffer2[BUFFER_SIZE];
 char* currentBuffer = buffer1;
+
+void generateTable() {
+    FILE *file = fopen("table.txt", "r"); // Open the file for reading
+    if (file == NULL) {
+        printf("Error opening file.\n");
+        return NULL;
+    }
+
+    int state, input, next_state;
+    while (fscanf(file, "%d, %d, %d\n", &state, &input, &next_state) == 3) {
+        table[state][input] = next_state; // Assign next_state to index
+    }
+    fclose(file);
+}
 
 char** generateKeywords() {
     FILE *file = fopen("keywords.txt", "r");
@@ -50,6 +64,7 @@ int main() {
     // Open files --> input file (to compile), tokenFile (symbol table), errorFile
     char inputFName[100];
     printf("Enter path of file to compile: ");
+    // test cases/Test1.cp
     scanf("%s", inputFName);
     inputFile = fopen(inputFName, "r");
 
@@ -58,10 +73,12 @@ int main() {
 
     if (inputFile == NULL || tokenFile == NULL || errorFile == NULL) {
         printf("Error opening files\n");
-        return 1;
+        return NULL;
     }
 
+    // generate keywords and transition table
     char **keywordsArray = generateKeywords();
+    generateTable();
 
     return 0;
 }

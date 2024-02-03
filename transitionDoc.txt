@@ -10,7 +10,7 @@ state, input, next state (stored as value)
 0, 62, 6    // >  
 6, 61, 7    // >= (accept)
 6, 50, 8    // >* (accept)
-
+---------------------------------------------
 0, 48, 13    // digit
 
 13, 48, 13   // digit repeating
