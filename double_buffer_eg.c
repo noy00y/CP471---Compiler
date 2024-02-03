@@ -11,7 +11,7 @@ int main() {
     size_t bytesRead;
 
     // Open the file for reading
-    file = fopen("test cases/Test1.cp", "rb");
+    file = fopen("test cases/Test9.cp", "rb");
     if (file == NULL) {
         perror("Error opening file");
         return 1;
