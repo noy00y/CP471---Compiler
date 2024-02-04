@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 
 /* Constants and Global Declarations: */ 
 #define MAX_KEYWORDS 100
@@ -15,8 +16,8 @@ typedef enum {
     TOKEN_FLOAT,
     TOKEN_KEYWORD,
     TOKEN_LITERAL,
-    TOKEN_EOF,
-    TOKEN_ERROR
+    TOKEN_EOF, // end of file
+    TOKEN_ERROR // error
 } TokenType;
 
 // Define struct to represent token
@@ -84,20 +85,52 @@ char** generateKeywords() {
     return keywords;
 }
 
+// Parse file stream for chars
+Token getNextToken() {
+    Token token;
+    int currentState = 0;
+    char currentChar;
+
+    while (1) {
+        currentChar = fgetc(inputFile);
+        printf("%c", currentChar);
+        if (currentChar == EOF) {
+            token.type = TOKEN_EOF;
+            break;
+        }
+
+        // Get state:
+        currentState = table[currentState][(char)currentChar];
+
+    }
+
+    return token;
+}
+
+
 // Phases:
 void lexicalAnalysis() {
+    // Initialize: temp token for storing, line and character for tracking position
+    Token token;
+    int line = 1;
+    int character = 0;
     
+    while(1) {
+        token = getNextToken();
+        if (token.type == TOKEN_EOF) {
+            break;
+        } 
+    }
 }
 
 int main() {
 
     // Open files --> input file (to compile), tokenFile (symbol table), errorFile
-    char inputFName[100];
-    printf("Enter path of file to compile: ");
+    // char inputFName[100];
+    // printf("Enter path of file to compile: ");
     // test cases/Test1.cp
-    scanf("%s", inputFName);
-    inputFile = fopen(inputFName, "r");
-
+    // scanf("%s", inputFName);
+    inputFile = fopen("test cases/Test6.cp", "r");
     tokenFile = fopen("tokens.txt", "w");
     errorFile = fopen("errors.txt", "w");
 
@@ -109,7 +142,6 @@ int main() {
     // Generate keywords and transition table
     char **keywordsArray = generateKeywords();
     generateTable();
-
     lexicalAnalysis(); // run parsing
 
     return 0;
