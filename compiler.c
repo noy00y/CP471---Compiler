@@ -61,6 +61,7 @@ char** generateKeywords() {
 }
 
 int main() {
+
     // Open files --> input file (to compile), tokenFile (symbol table), errorFile
     char inputFName[100];
     printf("Enter path of file to compile: ");
@@ -79,6 +80,8 @@ int main() {
     // generate keywords and transition table
     char **keywordsArray = generateKeywords();
     generateTable();
+
+    // 
 
     return 0;
 }
