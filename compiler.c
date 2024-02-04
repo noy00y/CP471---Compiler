@@ -8,6 +8,17 @@
 #define MAX_KEYWORDS 100
 #define BUFFER_SIZE 2048
 
+// Lexical Analysis:
+FILE *inputFile;
+FILE *tokenFile;
+FILE *errorFile;
+
+char* keywords[30]; // eg. for, do, while, etc...
+int table[30][127] = {0}; // transition table for automaton machine (30 states, 127 inputs)
+char buffer1[BUFFER_SIZE]; // Dual buffers for reading 
+char buffer2[BUFFER_SIZE];
+char* currentBuffer = buffer1;
+
 // Define Token Types --> expand upon in future iterations
 typedef enum {
     TOKEN_INT,
@@ -20,24 +31,65 @@ typedef enum {
     TOKEN_ERROR // error
 } TokenType;
 
-// Define struct to represent token
+/* Token
+    - struct to represent token
+    - getNextToken() - parse inputFile char by char and build tokens for lexical analysis 
+ */
 typedef struct {
     TokenType type;
-    char value[256];
-    int line;
+    char buffer_val1[BUFFER_SIZE]; // dual buffer for storing large chars
+    char buffer_val2[BUFFER_SIZE];
+    int line; // line and char where token starts
     int character;
 } Token;
 
-// Lexical Analysis:
-FILE *inputFile;
-FILE *tokenFile;
-FILE *errorFile;
+// Parse file stream for chars
+Token getNextToken() {
+    // Declarations
+    Token token; 
+    int currentState = 0;
+    char currentChar;
+    int ascii = 0; // ascii conversion of char --> used to index transition table
+    int bufferIndex = 0;
 
-char* keywords[30]; // eg. for, do, while, etc...
-int table[20][100] = {0}; // transition table for automaton machine
-char buffer1[BUFFER_SIZE]; // Dual buffers for reading 
-char buffer2[BUFFER_SIZE];
-char* currentBuffer = buffer1;
+    while (1) {
+        currentChar = fgetc(inputFile); // Read char by char until token is complete or EOF
+        if (currentChar == EOF) {
+            token.type = TOKEN_EOF;
+            break;
+        } 
+        
+        // Not EOF --> parse char
+        else {
+            ascii = (int)currentChar; // get ascii
+            // printf("Token: %c --> ascii: %d\n", currentChar, ascii);
+
+            /* Get current state */
+            // If a-z --> set state = 10
+            if (ascii >= 97 && ascii <= 122) {currentState = table[currentState][97];}
+
+            // if ws or \n --> set state 100?, 
+            if (ascii == 32 || ascii == 10) {currentState = table[currentState][ascii];}
+
+            /* Automaton Decisions*/
+            // State 10 --> add char to buffer
+            if (currentState == 10) {
+                // Use buffer 2 if index surpases max size
+                if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
+                else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
+                bufferIndex += 1;                
+            }
+
+            // State 100 --> accept token
+            else if (currentState == 100) {
+                token.type = TOKEN_IDENTIFIER;
+                break;
+            }
+        }
+    }
+    printf("returning token: %s\n", token.buffer_val1);
+    return token;
+}
 
 /* Functions: */
 void generateTable() {
@@ -85,35 +137,10 @@ char** generateKeywords() {
     return keywords;
 }
 
-// Parse file stream for chars
-Token getNextToken() {
-    Token token;
-    int currentState = 0;
-    char currentChar;
-
-    while (1) {
-        currentChar = fgetc(inputFile);
-        printf("%c", currentChar);
-        if (currentChar == EOF) {
-            token.type = TOKEN_EOF;
-            break;
-        }
-
-        // Get state:
-        currentState = table[currentState][(char)currentChar];
-
-    }
-
-    return token;
-}
-
-
-// Phases:
+/* Phases: */
 void lexicalAnalysis() {
     // Initialize: temp token for storing, line and character for tracking position
     Token token;
-    int line = 1;
-    int character = 0;
     
     while(1) {
         token = getNextToken();
@@ -123,6 +150,7 @@ void lexicalAnalysis() {
     }
 }
 
+/* Driver Code: */
 int main() {
 
     // Open files --> input file (to compile), tokenFile (symbol table), errorFile
