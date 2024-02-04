@@ -1,20 +1,44 @@
+/* Imports */ 
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 
-/*Constants and Global Declarations:*/ 
+/* Constants and Global Declarations: */ 
 #define MAX_KEYWORDS 100
 #define BUFFER_SIZE 2048
+
+// Define Token Types --> expand upon in future iterations
+typedef enum {
+    TOKEN_INT,
+    TOKEN_IDENTIFIER,
+    TOKEN_OPERATOR,
+    TOKEN_FLOAT,
+    TOKEN_KEYWORD,
+    TOKEN_LITERAL,
+    TOKEN_EOF,
+    TOKEN_ERROR
+} TokenType;
+
+// Define struct to represent token
+typedef struct {
+    TokenType type;
+    char value[256];
+    int line;
+    int character;
+} Token;
+
+// Lexical Analysis:
 FILE *inputFile;
 FILE *tokenFile;
 FILE *errorFile;
 
-char* keywords[30]; // Define keywords globally
-int table[20][100] = {0}; // initalize transition table w/ 0
-char buffer1[BUFFER_SIZE];
+char* keywords[30]; // eg. for, do, while, etc...
+int table[20][100] = {0}; // transition table for automaton machine
+char buffer1[BUFFER_SIZE]; // Dual buffers for reading 
 char buffer2[BUFFER_SIZE];
 char* currentBuffer = buffer1;
 
+/* Functions: */
 void generateTable() {
     FILE *file = fopen("table.txt", "r"); // Open the file for reading
     if (file == NULL) {
@@ -60,6 +84,11 @@ char** generateKeywords() {
     return keywords;
 }
 
+// Phases:
+void lexicalAnalysis() {
+    
+}
+
 int main() {
 
     // Open files --> input file (to compile), tokenFile (symbol table), errorFile
@@ -77,11 +106,11 @@ int main() {
         return NULL;
     }
 
-    // generate keywords and transition table
+    // Generate keywords and transition table
     char **keywordsArray = generateKeywords();
     generateTable();
 
-    // 
+    lexicalAnalysis(); // run parsing
 
     return 0;
 }
