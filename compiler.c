@@ -52,6 +52,10 @@ Token getNextToken() {
     int ascii = 0; // ascii conversion of char --> used to index transition table
     int bufferIndex = 0;
 
+    // Initialize Buffers:
+    memset(token.buffer_val1, '\0', BUFFER_SIZE);
+    memset(token.buffer_val2, '\0', BUFFER_SIZE);
+
     while (1) {
         currentChar = fgetc(inputFile); // Read char by char until token is complete or EOF
         if (currentChar == EOF) {
@@ -62,21 +66,36 @@ Token getNextToken() {
         // Not EOF --> parse char
         else {
             ascii = (int)currentChar; // get ascii
-            // printf("Token: %c --> ascii: %d\n", currentChar, ascii);
+            printf("Token: %c --> ascii: %d\n", currentChar, ascii);
 
             /* Get current state */
             // If a-z --> set state = 10
-            if (ascii >= 97 && ascii <= 122) {currentState = table[currentState][97];}
+            if (ascii >= 97 && ascii <= 122) {
+                currentState = table[currentState][97];
+            }
 
-            // if ws or \n --> set state 100?, 
-            if (ascii == 32 || ascii == 10) {currentState = table[currentState][ascii];}
+            // If ws or \n --> set state 100?, 
+            if (ascii == 32 || ascii == 10) {
+                currentState = table[currentState][ascii];
+            }
+
+            printf("State: %d\n", currentState);
+
+            // If symbols: (,)
+            
 
             /* Automaton Decisions*/
             // State 10 --> add char to buffer
             if (currentState == 10) {
                 // Use buffer 2 if index surpases max size
-                if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
-                else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
+                if (bufferIndex < BUFFER_SIZE) {
+                    token.buffer_val1[bufferIndex] = currentChar;
+                    printf("Adding %c to buffer 1 at index %d\n\n", currentChar, bufferIndex);
+                }
+                else {
+                    token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;
+                    printf("Adding %c to buffer2 at index %d\n\n", currentChar, bufferIndex);
+                }
                 bufferIndex += 1;                
             }
 
@@ -87,7 +106,7 @@ Token getNextToken() {
             }
         }
     }
-    printf("returning token: %s\n", token.buffer_val1);
+    printf("\nreturning token: %s\n---------------------------------------------\n", token.buffer_val1);
     return token;
 }
 
