@@ -80,16 +80,21 @@ Token getNextToken() {
                 currentState = table[currentState][ascii];
             }
 
+            // if numbers
+
             /* Special Chars --> Handle as follows
                 - if current state = 10 --> put special char back in file stream and return token
-                - else --> follow transition table
+                - if operator --> follow transition table
+                - if 
              */
             else {
+                // Return token and restart parsing
                 if (currentState == 10) {
                     // printf("\nInterrupted by %c with ascii %d\n", currentChar, ascii);
                     ungetc(currentChar, inputFile);
                     return token;
                 }
+                else if (ascii >= 60 && ascii <= 62) {currentState = table[currentState][ascii];} // operator
             }
 
             // printf("State: %d\n", currentState);
@@ -103,10 +108,34 @@ Token getNextToken() {
                 bufferIndex += 1;                
             }
 
-            // State 100 --> accept token
+            // State 1, 6 --> add char to buffer
+            else if (currentState == 1 || currentState == 6) {
+                // Use buffer 2 if index surpases max size
+                if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
+                else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
+                bufferIndex += 1;     
+            }
+
+            // Accept Single Operator --> 4, 8
+            else if (currentState == 4 || currentState == 8) {
+                token.type = TOKEN_OPERATOR;
+                return token;
+            }
+
+            // Accept Operators --> 2, 3, 5, 7 (add to buffer first)
+            else if (currentState == 2 || currentState == 3  || currentState == 5 || currentState == 7) {
+                if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
+                else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
+                bufferIndex += 1;     
+
+                token.type = TOKEN_OPERATOR;
+                return token;
+            }
+
+            // Accept Identifer if at 100
             else if (currentState == 100) {
                 token.type = TOKEN_IDENTIFIER;
-                break;
+                return token;
             }
         }
     }
@@ -167,6 +196,9 @@ void lexicalAnalysis() {
     while(1) {
         token = getNextToken();
         printf("%s\n", token.buffer_val1);
+
+        // Check if token is keyword
+
         if (token.type == TOKEN_EOF) {
             break;
         } 
