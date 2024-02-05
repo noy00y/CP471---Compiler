@@ -44,3 +44,6 @@ state, input, next state (stored as value)
 10, 97, 10   // a-z repeating
 10, 32, 100  // a-z|ws (accept)
 10, 10, 100  // a-z|\n (accept)
+
+--------------------------------------------------------
+

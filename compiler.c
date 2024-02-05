@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdbool.h>
 
 /* Constants and Global Declarations: */ 
 #define MAX_KEYWORDS 100
@@ -75,27 +76,30 @@ Token getNextToken() {
             }
 
             // If ws or \n --> set state 100?, 
-            if (ascii == 32 || ascii == 10) {
+            else if (ascii == 32 || ascii == 10) {
                 currentState = table[currentState][ascii];
             }
 
-            // printf("State: %d\n", currentState);
+            /* Special Chars --> Handle as follows
+                - if current state = 10 --> put special char back in file stream and return token
+                - else --> follow transition table
+             */
+            else {
+                if (currentState == 10) {
+                    // printf("\nInterrupted by %c with ascii %d\n", currentChar, ascii);
+                    ungetc(currentChar, inputFile);
+                    return token;
+                }
+            }
 
-            // If symbols: (,)
-            
+            // printf("State: %d\n", currentState);
 
             /* Automaton Decisions*/
             // State 10 --> add char to buffer
             if (currentState == 10) {
                 // Use buffer 2 if index surpases max size
-                if (bufferIndex < BUFFER_SIZE) {
-                    token.buffer_val1[bufferIndex] = currentChar;
-                    // printf("Adding %c to buffer 1 at index %d\n\n", currentChar, bufferIndex);
-                }
-                else {
-                    token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;
-                    // printf("Adding %c to buffer2 at index %d\n\n", currentChar, bufferIndex);
-                }
+                if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
+                else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
                 bufferIndex += 1;                
             }
 
@@ -106,7 +110,6 @@ Token getNextToken() {
             }
         }
     }
-    printf("\nreturning token: %s\n", token.buffer_val1);
     return token;
 }
 
@@ -163,6 +166,7 @@ void lexicalAnalysis() {
     
     while(1) {
         token = getNextToken();
+        printf("%s\n", token.buffer_val1);
         if (token.type == TOKEN_EOF) {
             break;
         } 
