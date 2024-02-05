@@ -85,7 +85,7 @@ Token getNextToken() {
             /* Special Chars --> Handle as follows
                 - if current state = 10 --> put special char back in file stream and return token
                 - if operator --> follow transition table
-                - if 
+                - if other --> accept special keyword
              */
             else {
                 // Return token and restart parsing
@@ -97,10 +97,8 @@ Token getNextToken() {
                 else if (ascii >= 60 && ascii <= 62) {currentState = table[currentState][ascii];} // operator
                 else {
                     currentState = table[currentState][50];
-                    // printf("Token: %c with state: %d\n", currentChar, currentState);
                 } // other
             }
-
             // printf("State: %d\n", currentState); 
 
             /* Automaton Decisions*/
@@ -203,9 +201,10 @@ void lexicalAnalysis() {
     while(1) {
         token = getNextToken();
         printf("%s\n", token.buffer_val1);
+        fprintf(tokenFile, "%s", token.buffer_val1); // Write token to file
+        fprintf(tokenFile, "%s\n", token.buffer_val2); // Write token to file
 
         // Check if token is keyword
-
         if (token.type == TOKEN_EOF) {
             break;
         } 
