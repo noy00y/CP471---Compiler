@@ -1,5 +1,9 @@
 state, input, next state (stored as value) 
-// accept = 100, reject = 99, other = 50
+// return states: accept = 100, reject = 99, other = 50
+// common inputs:
+    a-z --> 97
+    digits --> 48
+
 0, 60, 1    // <
 1, 61, 2    // <= (accept)
 1, 62, 3    // <> (accept)
@@ -10,7 +14,9 @@ state, input, next state (stored as value)
 0, 62, 6    // >  
 6, 61, 7    // >= (accept)
 6, 50, 8    // >* (accept)
----------------------------------------------
+
+--------------------------------------------------------
+
 0, 48, 13    // digit
 
 13, 48, 13   // digit repeating
@@ -31,3 +37,10 @@ state, input, next state (stored as value)
 
 18, 48, 18   // digit|.|digit|E|...|digit (repeating)
 18, 50, 19   // digit|.|digit|E|...|digit|other (accept) 
+
+--------------------------------------------------------
+
+0, 97, 10    // a-z
+10, 97, 10   // a-z repeating
+10, 32, 100  // a-z|ws (accept)
+10, 10, 100  // a-z|\n (accept)
