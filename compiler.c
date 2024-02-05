@@ -80,7 +80,7 @@ Token getNextToken() {
                 currentState = table[currentState][ascii];
             }
 
-            // if numbers
+            // If numbers:
 
             /* Special Chars --> Handle as follows
                 - if current state = 10 --> put special char back in file stream and return token
@@ -95,30 +95,31 @@ Token getNextToken() {
                     return token;
                 }
                 else if (ascii >= 60 && ascii <= 62) {currentState = table[currentState][ascii];} // operator
+                else {
+                    currentState = table[currentState][50];
+                    // printf("Token: %c with state: %d\n", currentChar, currentState);
+                } // other
             }
 
-            // printf("State: %d\n", currentState);
+            // printf("State: %d\n", currentState); 
 
             /* Automaton Decisions*/
-            // State 10 --> add char to buffer
-            if (currentState == 10) {
+            // States 1, 6, 10 --> add char to buffer
+            if (currentState == 1 || currentState == 6 || currentState == 10) {
                 // Use buffer 2 if index surpases max size
                 if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
                 else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
                 bufferIndex += 1;                
             }
 
-            // State 1, 6 --> add char to buffer
-            else if (currentState == 1 || currentState == 6) {
+            // Accept single special keyword (add char to buffer)
+            else if (currentState == 51) {
                 // Use buffer 2 if index surpases max size
                 if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
                 else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
                 bufferIndex += 1;     
-            }
 
-            // Accept Single Operator --> 4, 8
-            else if (currentState == 4 || currentState == 8) {
-                token.type = TOKEN_OPERATOR;
+                token.type = TOKEN_KEYWORD;
                 return token;
             }
 
@@ -128,6 +129,12 @@ Token getNextToken() {
                 else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
                 bufferIndex += 1;     
 
+                token.type = TOKEN_OPERATOR;
+                return token;
+            }
+
+            // Accept Single Operator --> 4, 8
+            else if (currentState == 4 || currentState == 8) {
                 token.type = TOKEN_OPERATOR;
                 return token;
             }
