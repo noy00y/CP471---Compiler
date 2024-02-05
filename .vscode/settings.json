@@ -2,6 +2,7 @@
     "files.associations": {
         "*.py": "python",
         ".asp": "asp",
-        "ctype.h": "c"
+        "ctype.h": "c",
+        "stdio.h": "c"
     }
 }

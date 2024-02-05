@@ -52,10 +52,6 @@ Token getNextToken() {
     int ascii = 0; // ascii conversion of char --> used to index transition table
     int bufferIndex = 0;
 
-    // Initialize Buffers:
-    memset(token.buffer_val1, '\0', BUFFER_SIZE);
-    memset(token.buffer_val2, '\0', BUFFER_SIZE);
-
     while (1) {
         currentChar = fgetc(inputFile); // Read char by char until token is complete or EOF
         if (currentChar == EOF) {
@@ -70,16 +66,10 @@ Token getNextToken() {
 
             /* Get current state */
             // If a-z --> set state = 10
-            if (ascii >= 97 && ascii <= 122) {
-                currentState = table[currentState][97];
-            }
+            if (ascii >= 97 && ascii <= 122) {currentState = table[currentState][97];}
 
             // If ws or \n --> set state 100?, 
-            if (ascii == 32 || ascii == 10) {
-                currentState = table[currentState][ascii];
-            }
-
-            // printf("State: %d\n", currentState);
+            if (ascii == 32 || ascii == 10) {currentState = table[currentState][ascii];}
 
             // If symbols: (,)
             
@@ -90,11 +80,11 @@ Token getNextToken() {
                 // Use buffer 2 if index surpases max size
                 if (bufferIndex < BUFFER_SIZE) {
                     token.buffer_val1[bufferIndex] = currentChar;
-                    // printf("Adding %c to buffer 1 at index %d\n\n", currentChar, bufferIndex);
+                    printf("Adding %c to buffer 1\n", currentChar);
                 }
                 else {
                     token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;
-                    // printf("Adding %c to buffer2 at index %d\n\n", currentChar, bufferIndex);
+                    printf("Adding %c to buffer2", currentChar);
                 }
                 bufferIndex += 1;                
             }
@@ -106,7 +96,7 @@ Token getNextToken() {
             }
         }
     }
-    printf("\nreturning token: %s\n", token.buffer_val1);
+    printf("returning token: %s\n", token.buffer_val1);
     return token;
 }
 
