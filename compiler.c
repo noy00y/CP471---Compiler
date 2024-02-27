@@ -80,10 +80,13 @@ Token getNextToken() {
                 currentState = table[currentState][ascii];
             }
 
-            // If numbers:
+            // If digits:
+            else if (ascii >=  48 || ascii <= 57) {
+                currentState = table[currentState][48];
+            }
 
             /* Special Chars --> Handle as follows
-                - if current state = 10 --> put special char back in file stream and return token
+                - if current state = 10 --> put special char back in file stream and return token we have so far 
                 - if operator --> follow transition table
                 - if other --> accept special keyword
              */
@@ -95,10 +98,12 @@ Token getNextToken() {
                     return token;
                 }
                 else if (ascii >= 60 && ascii <= 62) {currentState = table[currentState][ascii];} // operator
+                
                 else {
                     currentState = table[currentState][50];
                 } // other
             }
+
             // printf("State: %d\n", currentState); 
 
             /* Automaton Decisions*/
@@ -148,6 +153,7 @@ Token getNextToken() {
 }
 
 /* Functions: */
+// Generates Transition Table
 void generateTable() {
     FILE *file = fopen("table.txt", "r"); // Open the file for reading
     if (file == NULL) {
@@ -162,6 +168,7 @@ void generateTable() {
     fclose(file);
 }
 
+// Generates Reserved/Keyword Array
 char** generateKeywords() {
     FILE *file = fopen("keywords.txt", "r");
     if (file == NULL) {
@@ -217,9 +224,10 @@ int main() {
     // Open files --> input file (to compile), tokenFile (symbol table), errorFile
     // char inputFName[100];
     // printf("Enter path of file to compile: ");
-    // test cases/Test1.cp
     // scanf("%s", inputFName);
-    inputFile = fopen("test cases/Test6.cp", "r");
+    // inputFile = fopen(inputFName, "r");
+
+    inputFile = fopen("test cases/Test9.cp", "r");
     tokenFile = fopen("tokens.txt", "w");
     errorFile = fopen("errors.txt", "w");
 
@@ -233,5 +241,9 @@ int main() {
     generateTable();
     lexicalAnalysis(); // run parsing
 
+    // Close files and Exit Program
+    fclose(inputFile);
+    fclose(tokenFile);
+    fclose(errorFile);
     return 0;
 }
