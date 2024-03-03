@@ -67,27 +67,37 @@ Token getNextToken() {
         // Not EOF --> parse char
         else {
             ascii = (int)currentChar; // get ascii
-            // printf("Token: %c --> ascii: %d\n", currentChar, ascii);
+            printf("Token: %c --> ascii: %d, currentState = %d\n", currentChar, ascii, currentState);
+
+            /* Return current "special" token given following cases
+                - relop char --> states 1, 5 and 6 and current char is != <, > or =
+                - 
+             */
+            if ((currentState == 1 || currentState == 5 || currentState == 6) && (ascii < 60 || ascii > 62)) {
+                // printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
+                ungetc(currentChar, inputFile);
+                return token;
+            }
 
             /* Get current state */
             // If a-z --> set state = 10
-            if (ascii >= 97 && ascii <= 122) {
-                currentState = table[currentState][97];
-            }
+            else if (ascii >= 97 && ascii <= 122) {currentState = table[currentState][97];}
 
-            // If ws or \n --> set state 100?, 
-            else if (ascii == 32 || ascii == 10) {
-                currentState = table[currentState][ascii];
-            }
+            // If ws or \n --> set state 100, 
+            else if (ascii == 32 || ascii == 10) {currentState = table[currentState][ascii];}
 
-            // If digits:
-            else if (ascii >=  48 || ascii <= 57) {
-                currentState = table[currentState][48];
-            }
+            // Double Logic:
+            // else if (ascii >=  48 || ascii <= 57) {currentState = table[currentState][48];}
+
+            // // If E --> follow transition table (accepted with double)
+            // else if (ascii == 69) {currentState = table[currentState][ascii];}
+
+            // // If +, -, .  --> follow transition table (accepted with double)
+            // else if (ascii == 43 || ascii == 45 || ascii == 46) {currentState = table[currentState][ascii];}
 
             /* Special Chars --> Handle as follows
                 - if current state = 10 --> put special char back in file stream and return token we have so far 
-                - if operator --> follow transition table
+                - if <, >, <=, >=, == --> follow transtion table
                 - if other --> accept special keyword
              */
             else {
@@ -97,18 +107,18 @@ Token getNextToken() {
                     ungetc(currentChar, inputFile);
                     return token;
                 }
-                else if (ascii >= 60 && ascii <= 62) {currentState = table[currentState][ascii];} // operator
+                // operators <, >, =
+                else if (ascii >= 60 && ascii <= 62) {currentState = table[currentState][ascii];}
                 
-                else {
-                    currentState = table[currentState][50];
-                } // other
+                // other special
+                else {currentState = table[currentState][50];}
             }
 
             // printf("State: %d\n", currentState); 
 
             /* Automaton Decisions*/
             // States 1, 6, 10 --> add char to buffer
-            if (currentState == 1 || currentState == 6 || currentState == 10) {
+            if (currentState == 1  || currentState == 5 || currentState == 6 || currentState == 10) {
                 // Use buffer 2 if index surpases max size
                 if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
                 else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
@@ -126,8 +136,8 @@ Token getNextToken() {
                 return token;
             }
 
-            // Accept Operators --> 2, 3, 5, 7 (add to buffer first)
-            else if (currentState == 2 || currentState == 3  || currentState == 5 || currentState == 7) {
+            // Accept Operators --> 2, 3, 5, 7, 9 (add to buffer first)
+            else if (currentState == 2 || currentState == 3 || currentState == 7 || currentState == 9) {
                 if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
                 else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
                 bufferIndex += 1;     
@@ -136,7 +146,7 @@ Token getNextToken() {
                 return token;
             }
 
-            // Accept Single Operator --> 4, 8
+            // Accept Single Operator --> 4, 8 --> Need to fix this because its not accepting the char that comes after
             else if (currentState == 4 || currentState == 8) {
                 token.type = TOKEN_OPERATOR;
                 return token;

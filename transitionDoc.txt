@@ -9,7 +9,7 @@
     digits --> 48
     other --> 50
 
-// Transition for other:
+// Transition for other special keywrods:
 0, 50, 51   // other (accept)
 
 // Transitions for RELOP:
@@ -19,6 +19,8 @@
 1, 50, 4    // <* (accept)
 
 0, 61, 5    // =  (accept)
+5, 61, 9    // == (accept)
+5, 50, 11   // =* (accept)
 
 0, 62, 6    // >  
 6, 61, 7    // >= (accept)
