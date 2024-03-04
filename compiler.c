@@ -67,33 +67,68 @@ Token getNextToken() {
         // Not EOF --> parse char
         else {
             ascii = (int)currentChar; // get ascii
-            printf("Token: %c --> ascii: %d, currentState = %d\n", currentChar, ascii, currentState);
+            // printf("Token: %c --> ascii: %d, currentState = %d\n", currentChar, ascii, currentState);
 
-            /* Return current "special" token given following cases
-                - relop char --> states 1, 5 and 6 and current char is != <, > or =
-                - 
+            /* Return current token given following cases
+                - relop char --> states 1, 5 and 6 and current char is != to <, > or =
+                - digit char --> states 13, 15 and 18 and current char is != to 0-9, . or E
+                - a-z char --> states 10 and current char is != a-z
              */
             if ((currentState == 1 || currentState == 5 || currentState == 6) && (ascii < 60 || ascii > 62)) {
-                // printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
+                printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
                 ungetc(currentChar, inputFile);
                 return token;
             }
 
+            else if ((currentState == 13 || currentState == 15 || currentState == 18) && (ascii <  48 || ascii > 57) && (ascii != 46) && (ascii != 69)) {
+                printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
+                ungetc(currentChar, inputFile);
+                return token;
+            }
+
+            else if ((currentState == 10) && (ascii < 97 || ascii > 122)) {
+                printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
+                ungetc(currentChar, inputFile);
+                return token;                
+            }
+
             /* Get current state */
             // If a-z --> set state = 10
-            else if (ascii >= 97 && ascii <= 122) {currentState = table[currentState][97];}
+            else if (ascii >= 97 && ascii <= 122) {
+                currentState = table[currentState][97];
+                printf("Token: %c w/ ascii: %d is a-z --> currentState = %d\n", currentChar, ascii, currentState);
+            }
 
             // If ws or \n --> set state 100, 
-            else if (ascii == 32 || ascii == 10) {currentState = table[currentState][ascii];}
+            else if (ascii == 32 || ascii == 10) {
+                currentState = table[currentState][ascii];
+                printf("Token: %c w/ ascii: %d is ws --> currentState = %d\n", currentChar, ascii, currentState);
+            }
 
             // Double Logic:
-            // else if (ascii >=  48 || ascii <= 57) {currentState = table[currentState][48];}
+            else if (ascii >=  48 && ascii <= 57) {
+                currentState = table[currentState][48];
+                printf("Token: %c w/ ascii: %d is 0-9 --> currentState = %d\n", currentChar, ascii, currentState);
+            }
 
-            // // If E --> follow transition table (accepted with double)
-            // else if (ascii == 69) {currentState = table[currentState][ascii];}
+            // If E --> follow transition table (accepted with double)
+            else if (ascii == 69) {
+                currentState = table[currentState][ascii];
+                printf("Token: %c w/ ascii: %d is E --> currentState = %d\n", currentChar, ascii, currentState);
+            }
 
-            // // If +, -, .  --> follow transition table (accepted with double)
-            // else if (ascii == 43 || ascii == 45 || ascii == 46) {currentState = table[currentState][ascii];}
+            // If +, -, .  --> follow transition table (accepted with double)
+            else if (ascii == 43 || ascii == 45 || ascii == 46) {
+                int newState = table[currentState][ascii];
+                if (newState == 0) {
+                    if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
+                    else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
+                    bufferIndex += 1;     
+                    token.type = TOKEN_OPERATOR;
+                    return token;
+                }
+                printf("Token: %c w/ ascii: %d is +-. --> currentState = %d\n", currentChar, ascii, currentState);
+            }
 
             /* Special Chars --> Handle as follows
                 - if current state = 10 --> put special char back in file stream and return token we have so far 
@@ -102,23 +137,29 @@ Token getNextToken() {
              */
             else {
                 // Return token and restart parsing
-                if (currentState == 10) {
-                    // printf("\nInterrupted by %c with ascii %d\n", currentChar, ascii);
-                    ungetc(currentChar, inputFile);
-                    return token;
-                }
+                // if (currentState == 10) {
+                //     // printf("\nInterrupted by %c with ascii %d\n", currentChar, ascii);
+                //     ungetc(currentChar, inputFile);
+                //     return token;
+                // }
                 // operators <, >, =
-                else if (ascii >= 60 && ascii <= 62) {currentState = table[currentState][ascii];}
+                if (ascii >= 60 && ascii <= 62) {
+                    currentState = table[currentState][ascii];
+                    printf("Token: %c w/ ascii: %d is <,>,= --> currentState = %d\n", currentChar, ascii, currentState);
+                }
                 
                 // other special
-                else {currentState = table[currentState][50];}
+                else {
+                    currentState = table[currentState][50];
+                    printf("Token: %c w/ ascii: %d is Other --> currentState = %d\n", currentChar, ascii, currentState);
+                }
             }
 
-            // printf("State: %d\n", currentState); 
+            // printf("currentState = %d\n\n", currentState);
 
             /* Automaton Decisions*/
-            // States 1, 6, 10 --> add char to buffer
-            if (currentState == 1  || currentState == 5 || currentState == 6 || currentState == 10) {
+            // States 1, 6, 10, 13 --> add char to buffer
+            if (currentState == 1  || currentState == 5 || currentState == 6 || currentState == 10 || currentState == 13) {
                 // Use buffer 2 if index surpases max size
                 if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
                 else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
@@ -217,7 +258,7 @@ void lexicalAnalysis() {
     
     while(1) {
         token = getNextToken();
-        printf("%s\n", token.buffer_val1);
+        printf("-----------------------\n%s\n-----------------------\n", token.buffer_val1);
         fprintf(tokenFile, "%s", token.buffer_val1); // Write token to file
         fprintf(tokenFile, "%s\n", token.buffer_val2); // Write token to file
 
