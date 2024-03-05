@@ -20,6 +20,15 @@ char buffer1[BUFFER_SIZE]; // Dual buffers for reading
 char buffer2[BUFFER_SIZE];
 char* currentBuffer = buffer1;
 
+bool is_blank(const char *str) {
+    while (*str) {
+        if (!isspace((unsigned char)*str))
+            return false;
+        str++;
+    }
+    return true;
+}
+
 // Define Token Types --> expand upon in future iterations
 typedef enum {
     TOKEN_INT,
@@ -104,7 +113,7 @@ Token getNextToken() {
                 // printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
                 ungetc(currentChar, inputFile);
                 token.type = TOKEN_IDENTIFIER;
-                return token;                
+                return token;
             }
 
             /* Get current state */
@@ -197,6 +206,7 @@ Token getNextToken() {
             // Accept Identifer if at 100
             else if (currentState == 100) {
                 token.type = TOKEN_IDENTIFIER;
+
                 return token;
             }
         }
@@ -259,9 +269,25 @@ void lexicalAnalysis() {
     
     while(1) {
         token = getNextToken();
-        printf("%s --> %s\n", token.buffer_val1, tokenTypeStrings[token.type]);
-        fprintf(tokenFile, "%s", token.buffer_val1); // Write token to file
-        fprintf(tokenFile, "%s\n", token.buffer_val2); // Write token to file
+
+        if (!is_blank(token.buffer_val1)) {
+            for (int i = 0; i < 30; i++) {
+                if ((strncmp(token.buffer_val1, keywords[i], strlen(token.buffer_val1)) == 0) && strlen(token.buffer_val1) == strlen(keywords[i]) - 1) {
+                    // printf("matched %s with %s\n", token.buffer_val1, keywords[i]);
+                    token.type = TOKEN_KEYWORD;
+                    break;
+                }
+            }
+
+            printf("%s --> %s\n", token.buffer_val1, tokenTypeStrings[token.type]);
+
+            // char val[BUFFER_SIZE * 2 + 1];
+            // strcpy(val, token.buffer_val1);
+            // strcpy(val, token.buffer_val2);
+
+            fprintf(tokenFile, "%s", token.buffer_val1); // Write token to file
+            fprintf(tokenFile, "%s\n", token.buffer_val2); // Write token to file   
+        }
 
         // Check if token is keyword
         if (token.type == TOKEN_EOF) {

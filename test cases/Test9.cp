@@ -8,4 +8,4 @@ def int gcd(int a, int b)
 		return(gcd(a,b-a)) 
 	fi;
 fed;
-print gcd(21,15).
+print gcd(21.15,15)
