@@ -20,6 +20,15 @@ char buffer1[BUFFER_SIZE]; // Dual buffers for reading
 char buffer2[BUFFER_SIZE];
 char* currentBuffer = buffer1;
 
+bool is_blank(const char *str) {
+    while (*str) {
+        if (!isspace((unsigned char)*str))
+            return false;
+        str++;
+    }
+    return true;
+}
+
 // Define Token Types --> expand upon in future iterations
 typedef enum {
     TOKEN_INT,
@@ -31,6 +40,18 @@ typedef enum {
     TOKEN_EOF, // end of file
     TOKEN_ERROR // error
 } TokenType;
+
+// Array to map TokenType to strings
+const char *tokenTypeStrings[] = {
+    "TOKEN_INT",
+    "TOKEN_IDENTIFIER",
+    "TOKEN_OPERATOR",
+    "TOKEN_FLOAT",
+    "TOKEN_KEYWORD",
+    "TOKEN_LITERAL",
+    "TOKEN_EOF",
+    "TOKEN_ERROR"
+};
 
 /* Token
     - struct to represent token
@@ -67,43 +88,88 @@ Token getNextToken() {
         // Not EOF --> parse char
         else {
             ascii = (int)currentChar; // get ascii
-            // printf("Token: %c --> ascii: %d\n", currentChar, ascii);
+            // printf("Token: %c --> ascii: %d, currentState = %d\n", currentChar, ascii, currentState);
+
+            /* Return current token given following cases
+                - relop char --> states 1, 5 and 6 and current char is != to <, > or =
+                - digit char --> states 13, 15 and 18 and current char is != to 0-9, . or E
+                - a-z char --> states 10 and current char is != a-z
+             */
+            if ((currentState == 1 || currentState == 5 || currentState == 6) && (ascii < 60 || ascii > 62)) {
+                // printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
+                ungetc(currentChar, inputFile);
+                token.type = TOKEN_OPERATOR;
+                return token;
+            }
+
+            else if ((currentState == 13 || currentState == 15 || currentState == 18) && (ascii <  48 || ascii > 57) && (ascii != 46) && (ascii != 69)) {
+                // printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
+                ungetc(currentChar, inputFile);
+                token.type = TOKEN_FLOAT;
+                return token;
+            }
+
+            else if ((currentState == 10) && (ascii < 97 || ascii > 122)) {
+                // printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
+                ungetc(currentChar, inputFile);
+                token.type = TOKEN_IDENTIFIER;
+                return token;
+            }
 
             /* Get current state */
             // If a-z --> set state = 10
-            if (ascii >= 97 && ascii <= 122) {
+            else if (ascii >= 97 && ascii <= 122) {
                 currentState = table[currentState][97];
+                // printf("Token: %c w/ ascii: %d is a-z --> currentState = %d\n", currentChar, ascii, currentState);
             }
 
-            // If ws or \n --> set state 100?, 
+            // If ws or \n --> set state 100, 
             else if (ascii == 32 || ascii == 10) {
                 currentState = table[currentState][ascii];
+                // printf("Token: %c w/ ascii: %d is ws --> currentState = %d\n", currentChar, ascii, currentState);
             }
 
-            // If numbers:
+            // Double Logic:
+            else if (ascii >=  48 && ascii <= 57) {
+                currentState = table[currentState][48];
+                // printf("Token: %c w/ ascii: %d is 0-9 --> currentState = %d\n", currentChar, ascii, currentState);
+            }
 
-            /* Special Chars --> Handle as follows
-                - if current state = 10 --> put special char back in file stream and return token
-                - if operator --> follow transition table
-                - if other --> accept special keyword
-             */
-            else {
-                // Return token and restart parsing
-                if (currentState == 10) {
-                    // printf("\nInterrupted by %c with ascii %d\n", currentChar, ascii);
-                    ungetc(currentChar, inputFile);
+            // If E --> follow transition table (accepted with double)
+            else if (ascii == 69) {
+                currentState = table[currentState][ascii];
+                // printf("Token: %c w/ ascii: %d is E --> currentState = %d\n", currentChar, ascii, currentState);
+            }
+
+            // If +, -, .  --> follow transition table (accepted with double)
+            else if (ascii == 43 || ascii == 45 || ascii == 46) {
+                currentState = table[currentState][ascii];
+                if (currentState == 0) {
+                    if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
+                    else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
+                    bufferIndex += 1;     
+                    token.type = TOKEN_OPERATOR;
                     return token;
                 }
-                else if (ascii >= 60 && ascii <= 62) {currentState = table[currentState][ascii];} // operator
-                else {
-                    currentState = table[currentState][50];
-                } // other
+                // printf("Token: %c w/ ascii: %d is +-. --> currentState = %d\n", currentChar, ascii, currentState);
             }
-            // printf("State: %d\n", currentState); 
+
+            else if (ascii >= 60 && ascii <= 62) {
+                currentState = table[currentState][ascii];
+                // printf("Token: %c w/ ascii: %d is <,>,= --> currentState = %d\n", currentChar, ascii, currentState);
+            }
+                
+            // other special
+            else {
+                currentState = table[currentState][50];
+                // printf("Token: %c w/ ascii: %d is Other --> currentState = %d\n", currentChar, ascii, currentState);
+            }
+
+            // printf("currentState = %d\n\n", currentState);
 
             /* Automaton Decisions*/
-            // States 1, 6, 10 --> add char to buffer
-            if (currentState == 1 || currentState == 6 || currentState == 10) {
+            // States 1, 6, 10, 13 --> add char to buffer
+            if (currentState == 1  || currentState == 5 || currentState == 6 || currentState == 10 || currentState == 13 || currentState == 14 || currentState == 15) {
                 // Use buffer 2 if index surpases max size
                 if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
                 else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
@@ -121,8 +187,8 @@ Token getNextToken() {
                 return token;
             }
 
-            // Accept Operators --> 2, 3, 5, 7 (add to buffer first)
-            else if (currentState == 2 || currentState == 3  || currentState == 5 || currentState == 7) {
+            // Accept Operators --> 2, 3, 5, 7, 9 (add to buffer first)
+            else if (currentState == 2 || currentState == 3 || currentState == 7 || currentState == 9) {
                 if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
                 else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
                 bufferIndex += 1;     
@@ -131,7 +197,7 @@ Token getNextToken() {
                 return token;
             }
 
-            // Accept Single Operator --> 4, 8
+            // Accept Single Operator --> 4, 8 --> Need to fix this because its not accepting the char that comes after
             else if (currentState == 4 || currentState == 8) {
                 token.type = TOKEN_OPERATOR;
                 return token;
@@ -140,6 +206,7 @@ Token getNextToken() {
             // Accept Identifer if at 100
             else if (currentState == 100) {
                 token.type = TOKEN_IDENTIFIER;
+
                 return token;
             }
         }
@@ -148,6 +215,7 @@ Token getNextToken() {
 }
 
 /* Functions: */
+// Generates Transition Table
 void generateTable() {
     FILE *file = fopen("table.txt", "r"); // Open the file for reading
     if (file == NULL) {
@@ -162,6 +230,7 @@ void generateTable() {
     fclose(file);
 }
 
+// Generates Reserved/Keyword Array
 char** generateKeywords() {
     FILE *file = fopen("keywords.txt", "r");
     if (file == NULL) {
@@ -200,9 +269,25 @@ void lexicalAnalysis() {
     
     while(1) {
         token = getNextToken();
-        printf("%s\n", token.buffer_val1);
-        fprintf(tokenFile, "%s", token.buffer_val1); // Write token to file
-        fprintf(tokenFile, "%s\n", token.buffer_val2); // Write token to file
+
+        if (!is_blank(token.buffer_val1)) {
+            for (int i = 0; i < 30; i++) {
+                if ((strncmp(token.buffer_val1, keywords[i], strlen(token.buffer_val1)) == 0) && strlen(token.buffer_val1) == strlen(keywords[i]) - 1) {
+                    // printf("matched %s with %s\n", token.buffer_val1, keywords[i]);
+                    token.type = TOKEN_KEYWORD;
+                    break;
+                }
+            }
+
+            printf("%s --> %s\n", token.buffer_val1, tokenTypeStrings[token.type]);
+
+            // char val[BUFFER_SIZE * 2 + 1];
+            // strcpy(val, token.buffer_val1);
+            // strcpy(val, token.buffer_val2);
+
+            fprintf(tokenFile, "%s", token.buffer_val1); // Write token to file
+            fprintf(tokenFile, "%s\n", token.buffer_val2); // Write token to file   
+        }
 
         // Check if token is keyword
         if (token.type == TOKEN_EOF) {
@@ -217,9 +302,10 @@ int main() {
     // Open files --> input file (to compile), tokenFile (symbol table), errorFile
     // char inputFName[100];
     // printf("Enter path of file to compile: ");
-    // test cases/Test1.cp
     // scanf("%s", inputFName);
-    inputFile = fopen("test cases/Test6.cp", "r");
+    // inputFile = fopen(inputFName, "r");
+
+    inputFile = fopen("test cases/Test9.cp", "r");
     tokenFile = fopen("tokens.txt", "w");
     errorFile = fopen("errors.txt", "w");
 
@@ -233,5 +319,9 @@ int main() {
     generateTable();
     lexicalAnalysis(); // run parsing
 
+    // Close files and Exit Program
+    fclose(inputFile);
+    fclose(tokenFile);
+    fclose(errorFile);
     return 0;
 }
