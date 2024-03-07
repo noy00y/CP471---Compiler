@@ -4,8 +4,7 @@
        fdecls -> fdec; fdecls'
                | fdecls'
          fdec -> def type fname (params) declarations statement_seq fed
-       params -> type var
-               | type var , params
+       params -> type var params'
                | ϵ
         fname -> id
  declarations -> decl; declarations'
@@ -17,9 +16,8 @@
                | var
 statement_seq -> statement
                | statement; statement_seq
-    statement -> var = expr
-               | if bexpr then statement_seq fi
-               | if expr then statement_seq else statement_seq fi
+    statement -> if statement'
+               | var = expr
                | while bexpr do statement_seq od
                | print expr
                | return expr
@@ -130,3 +128,7 @@ declarations' -> decl; declarations'
           id' -> letter id'
                | digit id'
                | ϵ
+      params' -> ϵ
+               | , params
+   statement' -> bexpr then statement_seq fi
+               | expr then statement_seq else statement_seq fi
