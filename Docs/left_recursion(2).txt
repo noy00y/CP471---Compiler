@@ -1,0 +1,35 @@
+program        -> fdecls declarations statement_seq.
+fdecls         -> fdec; fdecls | ε
+fdec           -> def type fname (params) declarations statement_seq fed
+params         -> type var params'
+params'        -> , params | ε
+fname          -> id
+declarations   -> decl; declarations | ε
+decl           -> type varlist
+type           -> int | double
+varlist        -> var varlist'
+varlist'       -> , varlist | ε
+statement_seq  -> statement statement_seq'
+statement_seq' -> ; statement_seq
+statement      -> if bexpr then statement_seq statement' | var = expr | while bexpr do statement_seq od | print expr | return expr | ε
+statement'     -> fi | else statement_seq fi
+expr           -> term expr'
+expr'          -> + term expr' | - term expr' | ε
+term           -> factor term' 
+term'          -> * factor term' | / factor term' | % factor term' | ε 
+factor         -> id factor' | (expr) | id(exprseq)
+factor'        -> (exprseq) | ε
+exprseq        -> expr exprseq' | ε
+exprseq'       -> , exprseq | ε
+bexpr          -> bterm bexpr'
+bexpr'         -> or bterm bexpr' | ε
+bterm          -> bfactor bterm'
+bterm'         -> and bfactor bterm' | ε
+bfactor        -> (bexpr) | not bfactor | expr comp expr
+comp           -> < | > | == | <= | >= | <>
+var            -> id var'
+var'           -> [expr] | ε
+letter         -> a | b | c | ... | z
+digit          -> 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0
+id             -> letter | id letter | id digit
+number         -> integer | double
