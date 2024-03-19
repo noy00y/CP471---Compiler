@@ -1,10 +1,10 @@
-program        -> fdecls declarations statement_seq.
-fdecls         -> fdec; fdecls | ε
+program        -> fdecls declarations statement_seq .
+fdecls         -> fdec ; fdecls | ε
 fdec           -> def type fname (params) declarations statement_seq fed
 params         -> type var params'
 params'        -> , params | ε
 fname          -> id
-declarations   -> decl; declarations | ε
+declarations   -> decl ; declarations | ε
 decl           -> type varlist
 type           -> int | double
 varlist        -> var varlist'
