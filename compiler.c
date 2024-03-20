@@ -281,12 +281,10 @@ void lexicalAnalysis() {
 
             printf("%s --> %s\n", token.buffer_val1, tokenTypeStrings[token.type]);
 
-            // char val[BUFFER_SIZE * 2 + 1];
-            // strcpy(val, token.buffer_val1);
-            // strcpy(val, token.buffer_val2);
-
-            fprintf(tokenFile, "%s", token.buffer_val1); // Write token to file
-            fprintf(tokenFile, "%s\n", token.buffer_val2); // Write token to file   
+            // Write Token to File
+            fprintf(tokenFile, "<%s", token.buffer_val1); // Write token to file
+            fprintf(tokenFile, "%s", token.buffer_val2); // Write token to file   
+            fprintf(tokenFile, ", %s>\n", tokenTypeStrings[token.type]);
         }
 
         // Check if token is keyword
