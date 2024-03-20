@@ -15,6 +15,7 @@ return
 or
 and
 not
+do
 =
 <
 >
@@ -27,4 +28,3 @@ not
 .
 +
 ;
-do

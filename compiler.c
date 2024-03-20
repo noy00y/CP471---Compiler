@@ -302,8 +302,8 @@ int main() {
     // printf("Enter path of file to compile: ");
     // scanf("%s", inputFName);
     // inputFile = fopen(inputFName, "r");
+    inputFile = fopen("test cases/Test7.cp", "r");
 
-    inputFile = fopen("test cases/Test9.cp", "r");
     tokenFile = fopen("tokens.txt", "w");
     errorFile = fopen("errors.txt", "w");
 
