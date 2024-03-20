@@ -1,0 +1,82 @@
+program⟶ fdecls declarations statement_seq .
+fdecls⟶ fdec ; fdecls
+fdecls⟶ 
+fdec⟶ def type fname ( params ) declarations statement_seq fed
+params⟶ type var paramsp
+paramsp⟶ , params
+paramsp⟶ 
+fname⟶ id
+declarations⟶ decl ; declarations
+declarations⟶ 
+decl⟶ type varlist
+type⟶ int
+type⟶ double
+varlist⟶ var varlistp
+varlistp⟶ , varlist
+varlistp⟶ 
+statement_seq⟶ statement statement_seqp
+statement_seqp⟶ ; statement_seq
+statement⟶ if bexpr then statement_seq statementp
+statement⟶ var = expr
+statement⟶ while bexpr do statement_seq od
+statement⟶ print expr
+statement⟶ return expr
+statement⟶ 
+statementp⟶ fi
+statementp⟶ else statement_seq fi
+expr⟶ term exprp
+exprp⟶ + term exprp
+exprp⟶ - term exprp
+exprp⟶ 
+term⟶ factor termp 
+termp⟶ * factor termp 
+termp⟶ / factor termp
+termp⟶ % factor termp 
+termp⟶ 
+factor⟶ id factorp
+factor⟶ ( expr ) 
+factor⟶ id ( exprseq )
+factorp⟶ ( exprseq )
+factorp⟶ 
+exprseq⟶ expr exprseqp
+exprseq⟶ 
+exprseqp⟶ , exprseq
+exprseqp⟶ 
+bexpr⟶ bterm bexprp
+bexprp⟶ or bterm bexprp
+bexprp⟶ 
+bterm⟶ bfactor btermp
+btermp⟶ and bfactor btermp
+btermp⟶ 
+bfactor⟶ ( bexpr ) 
+bfactor⟶ not bfactor
+bfactor⟶ expr comp expr
+comp⟶ <
+comp⟶ >
+comp⟶ ==
+comp⟶ <=
+comp⟶ >=
+comp⟶ <>
+var⟶ id varp
+varp⟶ [ expr ]
+varp⟶ 
+letter⟶ a
+letter⟶ b
+letter⟶ c
+letter⟶ ...
+letter⟶ z
+digit⟶ 1
+digit⟶ 2
+digit⟶ 3
+digit⟶ 4
+digit⟶ 5
+digit⟶ 6
+digit⟶ 7
+digit⟶ 8
+digit⟶ 9
+digit⟶ 0
+id⟶ letter
+id⟶ id letter
+id⟶ id digit
+number⟶ integer
+number⟶ double

@@ -1,0 +1,8 @@
+methods
+- recursive decent --> not recommended
+- stack method
+- ast
+
+ADJUST THE GRAMMER FOR TOKENS
+
+- be specific with keyword tokens
