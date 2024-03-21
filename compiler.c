@@ -14,7 +14,7 @@ FILE *inputFile;
 FILE *tokenFile;
 FILE *errorFile;
 
-char* keywords[30]; // eg. for, do, while, etc...
+char* keywords[33]; // eg. for, do, while, etc...
 int table[30][127] = {0}; // transition table for automaton machine (30 states, 127 inputs)
 char buffer1[BUFFER_SIZE]; // Dual buffers for reading 
 char buffer2[BUFFER_SIZE];
@@ -29,16 +29,40 @@ bool is_blank(const char *str) {
     return true;
 }
 
-// Define Token Types --> expand upon in future iterations
+/* Define Token Types --> expand upon in future iterations
+    - T --> Identifies a token defined by user
+    - K --> Identifies a reserved keyword defined by compiler
+ */
 typedef enum {
-    TOKEN_INT,
-    TOKEN_IDENTIFIER,
-    TOKEN_OPERATOR,
-    TOKEN_FLOAT,
-    TOKEN_KEYWORD,
-    TOKEN_LITERAL,
-    TOKEN_EOF, // end of file
-    TOKEN_ERROR // error
+    // General
+    T_IDENTIFIER,
+    T_LITERAL,
+    T_EOF, // end of file
+    T_ERROR, // error
+
+    // Numbers
+    T_INT,
+    T_DOUBLE,
+
+    // Comparison Operators (Keyword)
+    K_LS_EQL, // <=
+    K_NOT_EQL, // <>
+    K_LS_THEN, // <
+    K_EQL, // ==
+    K_GR_EQL, // >=
+    K_GT_THEN, // >
+
+    // Other Specific Keywords
+    K_INT, 
+    K_DOUBLE,
+    K_EQL_TO, // ==
+    K_LPAREN, // (
+    K_RPAREN, // )
+    K_LBRACKET, // [
+    K_RBRACKET, // ]
+    K_def,
+    
+
 } TokenType;
 
 // Array to map TokenType to strings
