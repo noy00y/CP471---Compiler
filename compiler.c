@@ -44,18 +44,25 @@ typedef enum {
     T_INT,
     T_DOUBLE,
 
+    // RELOP Operators (Keywords)
+    K_EQL, // =
+    K_PLUS, // +
+    K_MINUS, // -
+    K_MULTIPY, // *
+    K_DIVIDE, // /
+    K_MOD, // %
+
     // Comparison Operators (Keyword)
     K_LS_EQL, // <=
     K_NOT_EQL, // <>
     K_LS_THEN, // <
-    K_EQL, // ==
+    K_EQL_TO, // ==
     K_GR_EQL, // >=
     K_GT_THEN, // >
 
     // Other Specific Keywords
     K_INT, // int asdf
     K_DOUBLE, // double asdf
-    K_EQL_TO, // ==
     K_LPAREN, // (
     K_RPAREN, // )
     K_LBRACKET, // [
@@ -63,10 +70,20 @@ typedef enum {
     K_DEF,
     K_FED,
     K_SEMI_COL, // ;
-    K_COMMA, 
-    K_DOT, // dot
-    
-
+    K_COMMA, // ,
+    K_DOT, // .
+    K_IF, 
+    K_THEN,
+    K_WHILE,
+    K_DO,
+    K_OD,
+    K_PRINT,
+    K_RETURN,
+    K_FI,
+    K_ELSE,
+    K_OR,
+    K_AND,
+    K_NOT
 } TokenType;
 
 // Array to map TokenType to strings
