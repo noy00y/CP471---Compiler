@@ -88,14 +88,56 @@ typedef enum {
 
 // Array to map TokenType to strings
 const char *tokenTypeStrings[] = {
-    "TOKEN_INT",
-    "TOKEN_IDENTIFIER",
-    "TOKEN_OPERATOR",
-    "TOKEN_FLOAT",
-    "TOKEN_KEYWORD",
-    "TOKEN_LITERAL",
-    "TOKEN_EOF",
-    "TOKEN_ERROR"
+    // General
+    "T_IDENTIFIER",
+    "T_LITERAL",
+    "T_EOF", // end of file
+    "T_ERROR", // error
+
+    // Numbers
+    "T_INT",
+    "T_DOUBLE",
+
+    // RELOP Operators (Keywords)
+    "K_EQL", // =
+    "K_PLUS", // +
+    "K_MINUS", // -
+    "K_MULTIPY", // *
+    "K_DIVIDE", // /
+    "K_MOD", // %
+
+    // Comparison Operators (Keyword)
+    "K_LS_EQL", // <=
+    "K_NOT_EQL", // <>
+    "K_LS_THEN", // <
+    "K_EQL_TO", // ==
+    "K_GR_EQL", // >=
+    "K_GT_THEN", // >
+
+    // Other Specific Keywords
+    "K_INT", // int asdf
+    "K_DOUBLE", // double asdf
+    "K_LPAREN", // (
+    "K_RPAREN", // )
+    "K_LBRACKET", // [
+    "K_RBRACKET", // ]
+    "K_DEF",
+    "K_FED",
+    "K_SEMI_COL", // ;
+    "K_COMMA", // ,
+    "K_DOT", // .
+    "K_IF", 
+    "K_THEN",
+    "K_WHILE",
+    "K_DO",
+    "K_OD",
+    "K_PRINT",
+    "K_RETURN",
+    "K_FI",
+    "K_ELSE",
+    "K_OR",
+    "K_AND",
+    "K_NOT"
 };
 
 /* Token
@@ -126,7 +168,7 @@ Token getNextToken() {
     while (1) {
         currentChar = fgetc(inputFile); // Read char by char until token is complete or EOF
         if (currentChar == EOF) {
-            token.type = TOKEN_EOF;
+            token.type = T_EOF;
             break;
         } 
         
@@ -143,21 +185,29 @@ Token getNextToken() {
             if ((currentState == 1 || currentState == 5 || currentState == 6) && (ascii < 60 || ascii > 62)) {
                 // printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
                 ungetc(currentChar, inputFile);
-                token.type = TOKEN_OPERATOR;
+
+                // Determine Token Type:
+                if (currentState == 1) token.type = K_LS_THEN;
+                else if (currentState == 5) token.type = K_EQL;
+                else if (currentState == 6) token.type = K_GT_THEN;
+
                 return token;
             }
 
             else if ((currentState == 13 || currentState == 15 || currentState == 18) && (ascii <  48 || ascii > 57) && (ascii != 46) && (ascii != 69)) {
                 // printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
                 ungetc(currentChar, inputFile);
-                token.type = TOKEN_FLOAT;
+
+                if (currentState == 13) token.type = T_INT;
+                else if (currentState == 15 || currentState == 18) token.type = T_DOUBLE;
+
                 return token;
             }
 
             else if ((currentState == 10) && (ascii < 97 || ascii > 122)) {
                 // printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
                 ungetc(currentChar, inputFile);
-                token.type = TOKEN_IDENTIFIER;
+                token.type = T_IDENTIFIER;
                 return token;
             }
 
@@ -193,7 +243,12 @@ Token getNextToken() {
                     if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
                     else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
                     bufferIndex += 1;     
-                    token.type = TOKEN_OPERATOR;
+
+                    // Determine Token Type:
+                    if (ascii == 43) token.type = K_PLUS;
+                    else if (ascii == 45) token.type = K_MINUS;
+                    else if (ascii == 46) token.type = K_DOT;
+
                     return token;
                 }
                 // printf("Token: %c w/ ascii: %d is +-. --> currentState = %d\n", currentChar, ascii, currentState);
