@@ -60,23 +60,6 @@ comp⟶ <>
 var⟶ id varp
 varp⟶ [ expr ]
 varp⟶ 
-letter⟶ a
-letter⟶ b
-letter⟶ c
-letter⟶ ...
-letter⟶ z
-digit⟶ 1
-digit⟶ 2
-digit⟶ 3
-digit⟶ 4
-digit⟶ 5
-digit⟶ 6
-digit⟶ 7
-digit⟶ 8
-digit⟶ 9
-digit⟶ 0
 id⟶ letter
 id⟶ id letter
 id⟶ id digit
-number⟶ integer
-number⟶ double

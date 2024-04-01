@@ -53,14 +53,18 @@ typedef enum {
     K_GT_THEN, // >
 
     // Other Specific Keywords
-    K_INT, 
-    K_DOUBLE,
+    K_INT, // int asdf
+    K_DOUBLE, // double asdf
     K_EQL_TO, // ==
     K_LPAREN, // (
     K_RPAREN, // )
     K_LBRACKET, // [
     K_RBRACKET, // ]
-    K_def,
+    K_DEF,
+    K_FED,
+    K_SEMI_COL, // ;
+    K_COMMA, 
+    K_DOT, // dot
     
 
 } TokenType;
