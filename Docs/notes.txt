@@ -28,3 +28,12 @@ stack
 
 questions:
 - how specific should should my tokens be
+
+TODO:
+- fix grammer issues ✓
+- token lexemme identification
+    - identify keywords seperately ✓
+    - parse int and doubles seperately in compiler 
+- Fix parsing logic
+    - implement panick mode
+    - fix double parsing for E
