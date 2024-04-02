@@ -283,6 +283,9 @@ Token getNextToken() {
                 else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
                 bufferIndex += 1;     
 
+                // Determine Token Type:
+                if (ascii == )
+
                 token.type = TOKEN_KEYWORD;
                 return token;
             }
