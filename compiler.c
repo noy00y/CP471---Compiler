@@ -208,6 +208,32 @@ Token getNextToken() {
                 // printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
                 ungetc(currentChar, inputFile);
                 token.type = T_IDENTIFIER;
+
+                if (!is_blank(token.buffer_val1)) {
+                    for (int i = 0; i < 33; i++) {
+                        if ((strncmp(token.buffer_val1, keywords[i], strlen(token.buffer_val1)) == 0) && strlen(token.buffer_val1) == strlen(keywords[i]) - 1) {
+                            // printf("matched with %s\n", keywords[i]);
+                            if (i == 0) token.type = K_DEF;
+                            else if (i == 5) token.type = K_INT;
+                            else if (i == 6) token.type = K_DOUBLE;
+                            else if (i == 7) token.type = K_IF;
+                            else if (i == 8) token.type = K_THEN;
+                            else if (i == 9) token.type = K_FED;
+                            else if (i == 10) token.type = K_FI;
+                            else if (i == 11) token.type = K_ELSE;
+                            else if (i == 12) token.type = K_WHILE;
+                            else if (i == 13) token.type = K_PRINT;
+                            else if (i == 14) token.type = K_RETURN;
+                            else if (i == 16) token.type = K_OR;
+                            else if (i == 17) token.type = K_OD;
+                            else if (i == 18) token.type = K_AND;
+                            else if (i == 19) token.type = K_NOT;
+                            else if (i == 20) token.type = K_DO;
+
+                            return token;
+                        }
+                    }
+                }
                 return token;
             }
 
@@ -297,6 +323,7 @@ Token getNextToken() {
                 else if (ascii == 46) token.type = K_DOT;
                 else if (ascii == 43) token.type = K_PLUS;
                 else if (ascii == 59) token.type = K_SEMI_COL;
+                else if (ascii == 44) token.type = K_COMMA;
 
                 return token;
             }
@@ -333,12 +360,12 @@ Token getNextToken() {
                 // First set to identifier then determine if its a keyword if any
                 // If token matches keywords doc --> find which keyword using ascii and set appropiately
                 token.type = T_IDENTIFIER;
-                printf("current token %s --> ", token.buffer_val1);
+                // printf("current token %s", token.buffer_val1);
                 
                 if (!is_blank(token.buffer_val1)) {
                     for (int i = 0; i < 33; i++) {
                         if ((strncmp(token.buffer_val1, keywords[i], strlen(token.buffer_val1)) == 0) && strlen(token.buffer_val1) == strlen(keywords[i]) - 1) {
-                            printf("matched with %s\n", keywords[i]);
+                            // printf("matched with %s\n", keywords[i]);
                             if (i == 0) token.type = K_DEF;
                             else if (i == 5) token.type = K_INT;
                             else if (i == 6) token.type = K_DOUBLE;
@@ -360,7 +387,7 @@ Token getNextToken() {
                         }
                     }
                 }
-                printf("not matched\n");
+                // printf("not matched\n");
                 return token;
             }
         }
@@ -425,7 +452,7 @@ void lexicalAnalysis() {
         token = getNextToken();
 
         if (!is_blank(token.buffer_val1)) {
-            // printf("%s --> %s\n", token.buffer_val1, tokenTypeStrings[token.type]);
+            printf("%s --> %s\n", token.buffer_val1, tokenTypeStrings[token.type]);
 
             // Write Token to File
             fprintf(tokenFile, "<%s", token.buffer_val1); // Write token to file
