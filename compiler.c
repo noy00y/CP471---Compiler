@@ -284,9 +284,20 @@ Token getNextToken() {
                 bufferIndex += 1;     
 
                 // Determine Token Type:
-                if (ascii == )
+                if (ascii == 40) token.type = K_LPAREN;
+                else if (ascii == 41) token.type = K_RPAREN;
+                else if (ascii == 91) token.type = K_LBRACKET;
+                else if (ascii == 93) token.type = K_RBRACKET;
+                else if (ascii == 37) token.type = K_MOD;
+                else if (ascii == 61) token.type = K_EQL;
+                else if (ascii == 60) token.type = K_LS_THEN;
+                else if (ascii == 62) token.type = K_GT_THEN;
+                else if (ascii == 42) token.type = K_MULTIPY;
+                else if (ascii == 45) token.type = K_MINUS;
+                else if (ascii == 46) token.type = K_DOT;
+                else if (ascii == 43) token.type = K_PLUS;
+                else if (ascii == 59) token.type = K_SEMI_COL;
 
-                token.type = TOKEN_KEYWORD;
                 return token;
             }
 
@@ -296,20 +307,60 @@ Token getNextToken() {
                 else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
                 bufferIndex += 1;     
 
-                token.type = TOKEN_OPERATOR;
+                // Determine Token Type:
+                if (currentState == 2) token.type = K_LS_EQL;
+                else if (currentState == 3) token.type = K_NOT_EQL;
+                else if (currentState == 7) token.type = K_GR_EQL;
+                else if (currentState == 9) token.type = K_EQL_TO;
+
                 return token;
             }
 
             // Accept Single Operator --> 4, 8 --> Need to fix this because its not accepting the char that comes after
             else if (currentState == 4 || currentState == 8) {
-                token.type = TOKEN_OPERATOR;
+                
+                // Determine Token Type:
+                if (currentState == 4) token.type = K_GT_THEN;
+                else if (currentState == 8) token.type = K_LS_THEN;
+
                 return token;
             }
 
             // Accept Identifer if at 100
             else if (currentState == 100) {
-                token.type = TOKEN_IDENTIFIER;
 
+                // Determine Token Type:
+                // First set to identifier then determine if its a keyword if any
+                // If token matches keywords doc --> find which keyword using ascii and set appropiately
+                token.type = T_IDENTIFIER;
+                printf("current token %s --> ", token.buffer_val1);
+                
+                if (!is_blank(token.buffer_val1)) {
+                    for (int i = 0; i < 33; i++) {
+                        if ((strncmp(token.buffer_val1, keywords[i], strlen(token.buffer_val1)) == 0) && strlen(token.buffer_val1) == strlen(keywords[i]) - 1) {
+                            printf("matched with %s\n", keywords[i]);
+                            if (i == 0) token.type = K_DEF;
+                            else if (i == 5) token.type = K_INT;
+                            else if (i == 6) token.type = K_DOUBLE;
+                            else if (i == 7) token.type = K_IF;
+                            else if (i == 8) token.type = K_THEN;
+                            else if (i == 9) token.type = K_FED;
+                            else if (i == 10) token.type = K_FI;
+                            else if (i == 11) token.type = K_ELSE;
+                            else if (i == 12) token.type = K_WHILE;
+                            else if (i == 13) token.type = K_PRINT;
+                            else if (i == 14) token.type = K_RETURN;
+                            else if (i == 16) token.type = K_OR;
+                            else if (i == 17) token.type = K_OD;
+                            else if (i == 18) token.type = K_AND;
+                            else if (i == 19) token.type = K_NOT;
+                            else if (i == 20) token.type = K_DO;
+
+                            return token;
+                        }
+                    }
+                }
+                printf("not matched\n");
                 return token;
             }
         }
@@ -374,26 +425,17 @@ void lexicalAnalysis() {
         token = getNextToken();
 
         if (!is_blank(token.buffer_val1)) {
-            for (int i = 0; i < 30; i++) {
-                if ((strncmp(token.buffer_val1, keywords[i], strlen(token.buffer_val1)) == 0) && strlen(token.buffer_val1) == strlen(keywords[i]) - 1) {
-                    // printf("matched %s with %s\n", token.buffer_val1, keywords[i]);
-                    token.type = TOKEN_KEYWORD;
-                    break;
-                }
-            }
-
-            printf("%s --> %s\n", token.buffer_val1, tokenTypeStrings[token.type]);
+            // printf("%s --> %s\n", token.buffer_val1, tokenTypeStrings[token.type]);
 
             // Write Token to File
             fprintf(tokenFile, "<%s", token.buffer_val1); // Write token to file
             fprintf(tokenFile, "%s", token.buffer_val2); // Write token to file   
             fprintf(tokenFile, ", %s>\n", tokenTypeStrings[token.type]);
         }
-
         // Check if token is keyword
-        if (token.type == TOKEN_EOF) {
+        if (token.type == T_EOF) {
             break;
-        } 
+        }
     }
 }
 
