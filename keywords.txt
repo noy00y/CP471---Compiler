@@ -1,6 +1,8 @@
 def
 (
 )
+[
+]
 int
 double
 if
@@ -13,6 +15,7 @@ print
 return
 %
 or
+od
 and
 not
 do

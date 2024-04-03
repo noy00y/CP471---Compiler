@@ -37,16 +37,16 @@
 
 15, 48, 15   // digit|.|digit repeating
 15, 50, 100   // digit|.|digit|other (accept)
-15, 69, 16   // digit|.|digit|E
+15, 101, 16   // digit|.|digit|e
 
-16, 43, 17   // digit|.|digit|E|+
-16, 45, 17   // digit|.|digit|E|-
-16, 48, 18   // digit|.|digit|E|digit
+16, 43, 17   // digit|.|digit|e|+
+16, 45, 17   // digit|.|digit|e|-
+16, 48, 18   // digit|.|digit|e|digit
 
-17, 48, 18   // digit|.|digit|E|+/-|digit
+17, 48, 18   // digit|.|digit|e|+/-|digit
 
-18, 48, 18   // digit|.|digit|E|...|digit (repeating)
-18, 50, 100   // digit|.|digit|E|...|digit|other (accept) 
+18, 48, 18   // digit|.|digit|e|...|digit (repeating)
+18, 50, 100   // digit|.|digit|e|...|digit|other (accept) 
 
 // Transition for Keywords and Identifiers:
 0, 97, 10    // a-z
