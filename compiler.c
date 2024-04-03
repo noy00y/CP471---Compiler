@@ -179,7 +179,7 @@ Token getNextToken() {
 
             /* Return current token given following cases
                 - relop char --> states 1, 5 and 6 and current char is != to <, > or =
-                - digit char --> states 13, 15 and 18 and current char is != to 0-9, . or E
+                - digit char --> states 13, 15 and 18 and current char is != to 0-9, . or E/e
                 - a-z char --> states 10 and current char is != a-z
              */
             if ((currentState == 1 || currentState == 5 || currentState == 6) && (ascii < 60 || ascii > 62)) {
@@ -194,7 +194,7 @@ Token getNextToken() {
                 return token;
             }
 
-            else if ((currentState == 13 || currentState == 15 || currentState == 18) && (ascii <  48 || ascii > 57) && (ascii != 46) && (ascii != 69)) {
+            else if ((currentState == 13 || currentState == 15 || currentState == 18) && (ascii <  48 || ascii > 57) && (ascii != 46) && (ascii != 69)&& (ascii != 101)) {
                 // printf("Return: %c w/ ascii = %d back to the file stream\n", currentChar, ascii);
                 ungetc(currentChar, inputFile);
 
@@ -239,8 +239,10 @@ Token getNextToken() {
 
             /* Get current state */
             // If a-z --> set state = 10
+            // If e and currentState = 15 --> set state = 16
             else if (ascii >= 97 && ascii <= 122) {
-                currentState = table[currentState][97];
+                if (currentState == 15 && ascii == 101) currentState = table[currentState][101];
+                else currentState = table[currentState][97];
                 // printf("Token: %c w/ ascii: %d is a-z --> currentState = %d\n", currentChar, ascii, currentState);
             }
 
@@ -256,9 +258,9 @@ Token getNextToken() {
                 // printf("Token: %c w/ ascii: %d is 0-9 --> currentState = %d\n", currentChar, ascii, currentState);
             }
 
-            // If E --> follow transition table (accepted with double)
+            // If E --> follow transition table with low e (accepted with double)
             else if (ascii == 69) {
-                currentState = table[currentState][ascii];
+                currentState = table[currentState][101];
                 // printf("Token: %c w/ ascii: %d is E --> currentState = %d\n", currentChar, ascii, currentState);
             }
 
@@ -295,7 +297,7 @@ Token getNextToken() {
 
             /* Automaton Decisions*/
             // States 1, 6, 10, 13 --> add char to buffer
-            if (currentState == 1  || currentState == 5 || currentState == 6 || currentState == 10 || currentState == 13 || currentState == 14 || currentState == 15) {
+            if (currentState == 1  || currentState == 5 || currentState == 6 || currentState == 10 || currentState == 13 || currentState == 14 || currentState == 15 || currentState == 16 || currentState == 17 || currentState == 18) {
                 // Use buffer 2 if index surpases max size
                 if (bufferIndex < BUFFER_SIZE) {token.buffer_val1[bufferIndex] = currentChar;}
                 else {token.buffer_val2[bufferIndex - BUFFER_SIZE] = currentChar;}
@@ -474,7 +476,7 @@ int main() {
     // printf("Enter path of file to compile: ");
     // scanf("%s", inputFName);
     // inputFile = fopen(inputFName, "r");
-    inputFile = fopen("test cases/Test7.cp", "r");
+    inputFile = fopen("test cases/Test3.cp", "r");
 
     tokenFile = fopen("tokens.txt", "w");
     errorFile = fopen("errors.txt", "w");
