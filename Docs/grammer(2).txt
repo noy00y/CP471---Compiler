@@ -1,35 +1,65 @@
-program        -> fdecls declarations statement_seq .
-fdecls         -> fdec ; fdecls | ε
-fdec           -> def type fname ( params ) declarations statement_seq fed
-params         -> type var params'
-params'        -> , params | ε
-fname          -> id
-declarations   -> decl ; declarations | ε
-decl           -> type varlist
-type           -> int | double
-varlist        -> var varlist'
-varlist'       -> , varlist | ε
-statement_seq  -> statement statement_seq'
-statement_seq' -> ; statement_seq
-statement      -> if bexpr then statement_seq statement' | var = expr | while bexpr do statement_seq od | print expr | return expr | ε
-statement'     -> fi | else statement_seq fi
-expr           -> term expr'
-expr'          -> + term expr' | - term expr' | ε
-term           -> factor term' 
-term'          -> * factor term' | / factor term' | % factor term' | ε 
-factor         -> id factor' | ( expr ) | id ( exprseq )
-factor'        -> (exprseq) | ε
-exprseq        -> expr exprseq' | ε
-exprseq'       -> , exprseq | ε
-bexpr          -> bterm bexpr'
-bexpr'         -> or bterm bexpr' | ε
-bterm          -> bfactor bterm'
-bterm'         -> and bfactor bterm' | ε
-bfactor        -> ( bexpr ) | not bfactor | expr comp expr
-comp           -> < | > | == | <= | >= | <>
-var            -> id var'
-var'           -> [ expr ] | ε
-letter         -> a | b | c | ... | z
-digit          -> 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0
-id             -> letter | id letter | id digit
-number         -> integer | double
+program⟶ fdecls declarations statement_seq K_DOT
+fdecls⟶ fdec K_SEMI_COL fdecls
+fdecls⟶ 
+fdec⟶ K_DEF type fname K_LPAREN params K_RPAREN declarations statement_seq K_FED
+params⟶ type var paramsp
+paramsp⟶ K_COMMA params
+paramsp⟶ 
+fname⟶ id
+declarations⟶ decl K_SEMI_COL declarations
+declarations⟶ 
+decl⟶ type varlist
+type⟶ K_INT
+type⟶ K_DOUBLE
+varlist⟶ var varlistp
+varlistp⟶ K_COMMA varlist
+varlistp⟶ 
+statement_seq⟶ statement statement_seqp
+statement_seqp⟶ K_SEMI_COL statement_seq
+statement⟶ K_IF bexpr K_THEN statement_seq statementp
+statement⟶ var K_EQL expr
+statement⟶ K_WHILE bexpr K_DO statement_seq K_OD
+statement⟶ K_PRINT expr
+statement⟶ K_RETURN expr
+statement⟶ 
+statementp⟶ K_FI
+statementp⟶ K_ELSE statement_seq K_FI
+expr⟶ term exprp
+exprp⟶ K_PLUS term exprp
+exprp⟶ K_MINUS term exprp
+exprp⟶ 
+term⟶ factor termp 
+termp⟶ K_MULTIPY factor termp 
+termp⟶ K_DIVIDE factor termp
+termp⟶ K_MOD factor termp 
+termp⟶ 
+factor⟶ id factorp
+factor⟶ K_LPAREN expr K_RPAREN 
+factor⟶ id K_LPAREN exprseq K_RPAREN
+factorp⟶ K_LPAREN exprseq K_RPAREN
+factorp⟶ 
+exprseq⟶ expr exprseqp
+exprseq⟶ 
+exprseqp⟶ K_COMMA exprseq
+exprseqp⟶ 
+bexpr⟶ bterm bexprp
+bexprp⟶ K_OR bterm bexprp
+bexprp⟶ 
+bterm⟶ bfactor btermp
+btermp⟶ K_AND bfactor btermp
+btermp⟶ 
+bfactor⟶ K_LPAREN bexpr K_RPAREN 
+bfactor⟶ K_NOT bfactor
+bfactor⟶ expr comp expr
+comp⟶ K_LS_THEN
+comp⟶ K_GT_THEN
+comp⟶ K_EQL_TO
+comp⟶ K_LS_EQL
+comp⟶ K_GR_EQL
+comp⟶ K_NOT_EQL
+var⟶ id varp
+varp⟶ K_LBRACKET expr K_RBRACKET
+varp⟶ 
+id⟶ T_IDENTIFIER
+id⟶ id T_IDENTIFIER
+id⟶ id T_INT
