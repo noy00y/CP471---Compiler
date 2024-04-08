@@ -61,5 +61,3 @@ var ::= id varp
 varp ::= K_LBRACKET expr K_RBRACKET
 varp ::= ''
 id ::= T_IDENTIFIER
-id ::= id T_IDENTIFIER
-id ::= id T_INT
