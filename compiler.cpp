@@ -7,6 +7,7 @@
 #include <array>
 #include <map>
 #include <algorithm>
+#include <utility>
 using namespace std;
 
 /* Constants and Global Declarations: */ 
@@ -23,6 +24,12 @@ array<array<int, 127>, 30> table{}; // transition table for automaton machine (3
 vector<char> buffer1(BUFFER_SIZE); // Dual buffers for reading 
 vector<char> buffer2(BUFFER_SIZE); 
 vector<char>* currentBuffer = &buffer1;
+
+// Syntax Analysis
+using ProductionRule = vector<string>; // grammer production rule
+using LL1Key = pair<string, string>; // pair of current non terminal and lookahead terminal
+using LL1table = map<LL1Key, ProductionRule>; // sparse ll1 table
+LL1table ll1table;
 
 /* Structs */
 enum TokenType {
@@ -370,6 +377,45 @@ void loadKeywords() {
     }
 }
 
+
+/**
+ * 
+ * void addRule(const std::string& nonTerminal, const std::string& terminal, const Production& production) {
+    ll1Table[{nonTerminal, terminal}] = production;
+   }
+ * 
+ * 
+ * */ 
+
+// Loads Ll1 table with ll1 grammer
+void loadLL1() {
+
+    // S' --> Start
+    ll1table[{"S'", "K_SEMI_COL"}] = {"program", "$"};
+    ll1table[{"S'", "K_DEF"}] = {"program", "$"};
+    ll1table[{"S'", "K_INT"}] = {"program", "$"};
+    ll1table[{"S'", "K_DOUBLE"}] = {"program", "$"};
+    ll1table[{"S'", "K_IF"}] = {"program", "$"};
+    ll1table[{"S'", "K_WHILE"}] = {"program", "$"};
+    ll1table[{"S'", "K_PRINT"}] = {"program", "$"};
+    ll1table[{"S'", "K_RETURN"}] = {"program", "$"};
+    ll1table[{"S'", "T_IDENTIFIER"}] = {"program", "$"};
+
+    // Program
+    ll1table[{"program", "K_SEMI_COL"}] = {"fdecls", "declarations", "statement_seq", "K_DOT"};
+    ll1table[{"program", "K_DEF"}] = {"fdecls", "declarations", "statement_seq", "K_DOT"};
+    ll1table[{"program", "K_INT"}] = {"fdecls", "declarations", "statement_seq", "K_DOT"};
+    ll1table[{"program", "K_DOUBLE"}] = {"fdecls", "declarations", "statement_seq", "K_DOT"};
+    ll1table[{"program", "K_IF"}] = {"fdecls", "declarations", "statement_seq", "K_DOT"};
+    ll1table[{"program", "K_WHILE"}] = {"fdecls", "declarations", "statement_seq", "K_DOT"};
+    ll1table[{"program", "K_PRINT"}] = {"fdecls", "declarations", "statement_seq", "K_DOT"};
+    ll1table[{"program", "K_RETURN"}] = {"fdecls", "declarations", "statement_seq", "K_DOT"};
+    ll1table[{"program", "T_IDENTIFIER"}] = {"fdecls", "declarations", "statement_seq", "K_DOT"};
+
+    // Function Declarations:
+    
+}
+
 /* Phases */
 void lexicalAnalysis() {
 	// Initialize: temp token for storing, line and character for tracking position
@@ -396,7 +442,7 @@ void lexicalAnalysis() {
 }
 
 void syntaxAnalysis() {
-
+    
 }
 
 int main() {
@@ -421,6 +467,7 @@ int main() {
 
     // Run parsing
     lexicalAnalysis();
+    loadLL1();
 
     return 0;
 }
