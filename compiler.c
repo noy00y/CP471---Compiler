@@ -253,7 +253,7 @@ Token getNextToken() {
             }
 
             // Double Logic:
-            else if (ascii >=  48 && ascii <= 57) {
+            else if (ascii >= 48 && ascii <= 57) {
                 currentState = table[currentState][48];
                 // printf("Token: %c w/ ascii: %d is 0-9 --> currentState = %d\n", currentChar, ascii, currentState);
             }
