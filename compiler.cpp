@@ -581,8 +581,31 @@ void loadLL1() {
     ll1table[{"btermp", "K_AND"}] = {"K_AND", "bfactor", "btermp"};
 
     // Boolean Factor:
-    ll1table[{"bfactor", "K_LPAREN"}] = {"bfactor", "btermp"};
+    ll1table[{"bfactor", "K_LPAREN"}] = {"K_LPAREN", "bexpr", "K_RPAREN"};
+    // ll1table[{"bfactor", "K_LPAREN"}] = {"expr", "comp", "expr"};
+    ll1table[{"bfactor", "K_NOT"}] = {"K_NOT", "bfactor"};
+    ll1table[{"bfactor", "T_IDENTIFIER"}] = {"expr", "comp", "expr"};
 
+    // Comparison:
+    ll1table[{"comp", "K_LS_THEN"}] = {"K_LS_THEN"};
+    ll1table[{"comp", "K_GT_THEN"}] = {"K_GT_THEN"};
+    ll1table[{"comp", "K_EQL_TO"}] = {"K_EQL_TO"};
+    ll1table[{"comp", "K_LS_EQL"}] = {"K_LS_EQL"};
+    ll1table[{"comp", "K_GR_EQL"}] = {"K_GR_EQL"};
+    ll1table[{"comp", "K_NOT_EQL"}] = {"K_NOT_EQL"};
+
+    // Variable:
+    ll1table[{"var", "T_IDENTIFIER"}] = {"id", "varp"};
+
+    // Variable Prime:
+    ll1table[{"varp", "K_SEMI_COL"}] = {"ε"};
+    ll1table[{"varp", "K_RPAREN"}] = {"ε"};
+    ll1table[{"varp", "K_COMMA"}] = {"ε"};
+    ll1table[{"varp", "K_EQL"}] = {"ε"};
+    ll1table[{"varp", "K_LBRACKET"}] = {"K_LBRACKET", "expr", "K_RBRACKET"};
+
+    // Identifier:
+    ll1table[{"id", "T_IDENTIFIER"}] = {"T_IDENTIFIER"};
 }
 
 /* Phases */
