@@ -377,16 +377,6 @@ void loadKeywords() {
     }
 }
 
-
-/**
- * 
- * void addRule(const std::string& nonTerminal, const std::string& terminal, const Production& production) {
-    ll1Table[{nonTerminal, terminal}] = production;
-   }
- * 
- * 
- * */ 
-
 // Loads Ll1 table with ll1 grammer
 void loadLL1() {
 
@@ -412,8 +402,187 @@ void loadLL1() {
     ll1table[{"program", "K_RETURN"}] = {"fdecls", "declarations", "statement_seq", "K_DOT"};
     ll1table[{"program", "T_IDENTIFIER"}] = {"fdecls", "declarations", "statement_seq", "K_DOT"};
 
-    // Function Declarations:
+    // Function Declarations (Recursive):
+    ll1table[{"fdecls", "K_SEMI_COL"}] = {"ε"};
+    ll1table[{"fdecls", "K_DEF"}] = {"fdec", "K_SEMI_COL", "fdecls"};
+    ll1table[{"fdecls", "K_INT"}] = {"ε"};
+    ll1table[{"fdecls", "K_DOUBLE"}] = {"ε"};
+    ll1table[{"fdecls", "K_IF"}] = {"ε"};
+    ll1table[{"fdecls", "K_WHILE"}] = {"ε"};
+    ll1table[{"fdecls", "K_PRINT"}] = {"ε"};
+    ll1table[{"fdecls", "K_RETURN"}] = {"ε"};
+    ll1table[{"fdecls", "T_IDENTIFIER"}] = {"ε"};
+
+    // Function Declaration:
+    ll1table[{"fdec", "K_DEF"}] = {"K_DEF", "type", "fname", "K_LPAREN", "params", "K_RPAREN", "declarations", "statement_seq", "K_FED"};
+
+    // Parameters:
+    ll1table[{"params", "K_INT"}] = {"type", "var", "paramsp"};
+    ll1table[{"params", "K_DOUBLE"}] = {"type", "var", "paramsp"};
+
+    // Parameters Prime:
+    ll1table[{"paramsp", "K_RPAREN"}] = {"ε"};
+    ll1table[{"paramsp", "K_COMMA"}] = {"K_COMMA", "params"};
+
+    // Function Name:
+    ll1table[{"fname", "T_IDENTIFIER"}] = {"id"};
+
+    // Declarations (Recursive):
+    ll1table[{"declarations", "K_SEMI_COL"}] = {"ε"};
+    ll1table[{"declarations", "K_INT"}] = {"decl", "K_SEMI_COL", "declarations"};
+    ll1table[{"declarations", "K_DOUBLE"}] = {"decl", "K_SEMI_COL", "declarations"};
+    ll1table[{"declarations", "K_IF"}] = {"ε"};
+    ll1table[{"declarations", "K_WHILE"}] = {"ε"};
+    ll1table[{"declarations", "K_PRINT"}] = {"ε"};
+    ll1table[{"declarations", "K_RETURN"}] = {"ε"};
+    ll1table[{"declarations", "T_IDENTIFIER"}] = {"ε"};
+
+    // Declaration:
+    ll1table[{"decl", "K_INT"}] = {"type", "varlist"};
+    ll1table[{"decl", "K_DOUBLE"}] = {"type", "varlist"};
+
+    // Type:
+    ll1table[{"type", "K_INT"}] = {"K_INT"};
+    ll1table[{"type", "K_DOUBLE"}] = {"K_DOUBLE"};
+
+    // Variable List:
+    ll1table[{"varlist", "K_SEMI_COL"}] = {"ε"};
+    ll1table[{"varlist", "T_IDENTIFIER"}] = {"var", "varlistp"};
+
+    // Variable List Prime:
+    ll1table[{"varlistp", "K_SEMI_COL"}] = {"ε"};
+    ll1table[{"varlistp", "K_COMMA"}] = {"K_COMMA", "varlist"};
+
+    // Statement Sequence:
+    ll1table[{"statement_seq", "K_SEMI_COL"}] = {"statement", "statement_seqp"};
+    ll1table[{"statement_seq", "K_IF"}] = {"statement", "statement_seqp"};
+    ll1table[{"statement_seq", "K_WHILE"}] = {"statement", "statement_seqp"};
+    ll1table[{"statement_seq", "K_PRINT"}] = {"statement", "statement_seqp"};
+    ll1table[{"statement_seq", "K_RETURN"}] = {"statement", "statement_seqp"};
+    ll1table[{"statement_seq", "T_IDENTIFIER"}] = {"statement", "statement_seqp"};
+
+    // Statement Sequence Prime:
+    ll1table[{"statement_seqp", "K_SEMI_COL"}] = {"K_SEMI_COL", "statement_seq"};
+
+    // Statement:
+    ll1table[{"statement", "K_IF"}] = {"K_IF", "bexpr", "K_THEN", "statement_seq", "statementp"};
+    ll1table[{"statement", "K_WHILE"}] = {"K_WHILE", "bexpr", "K_DO", "statement_seq", "K_OD"};
+    ll1table[{"statement", "K_PRINT"}] = {"K_PRINT", "expr"};
+    ll1table[{"statement", "K_RETURN"}] = {"K_RETURN", "expr"};
+    ll1table[{"statement", "T_IDENTIFIER"}] = {"var", "K_EQL", "expr"};
+
+    // Statement Prime:
+    ll1table[{"statementp", "K_FI"}] = {"K_FI"};
+    ll1table[{"statementp", "K_ELSE"}] = {"K_ELSE", "statement_seq", "K_FI"};
     
+    // Expression:
+    ll1table[{"expr", "K_LPAREN"}] = {"term", "exprp"};
+    ll1table[{"expr", "T_IDENTIFIER"}] = {"term", "exprp"};
+
+    // Expression Prime:
+    ll1table[{"exprp", "K_SEMI_COL"}] = {"ε"};
+    ll1table[{"exprp", "K_RPAREN"}] = {"ε"};
+    ll1table[{"exprp", "K_COMMA"}] = {"ε"};
+    ll1table[{"exprp", "K_THEN"}] = {"ε"};
+    ll1table[{"exprp", "K_DO"}] = {"ε"};
+    ll1table[{"exprp", "K_PLUS"}] = {"K_PLUS", "term", "exprp"};
+    ll1table[{"exprp", "K_MINUS"}] = {"K_MINUS", "term", "exprp"};
+    ll1table[{"exprp", "K_OR"}] = {"ε"};
+    ll1table[{"exprp", "K_AND"}] = {"ε"};
+    ll1table[{"exprp", "K_LS_THEN"}] = {"ε"};
+    ll1table[{"exprp", "K_GT_THEN"}] = {"ε"};
+    ll1table[{"exprp", "K_EQL_TO"}] = {"ε"};
+    ll1table[{"exprp", "K_LS_EQL"}] = {"ε"};
+    ll1table[{"exprp", "K_GR_EQL"}] = {"ε"};
+    ll1table[{"exprp", "K_NOT_EQL"}] = {"ε"};
+    ll1table[{"exprp", "K_RBRACKET"}] = {"ε"};
+
+    // Term:
+    ll1table[{"term", "K_LPAREN"}] = {"factor", "termp"};
+    ll1table[{"term", "T_IDENTIFIER"}] = {"factor", "termp"};
+
+    // Term Prime:
+    ll1table[{"termp", "K_SEMI_COL"}] = {"ε"};
+    ll1table[{"termp", "K_RPAREN"}] = {"ε"};
+    ll1table[{"termp", "K_COMMA"}] = {"ε"};
+    ll1table[{"termp", "K_THEN"}] = {"ε"};
+    ll1table[{"termp", "K_DO"}] = {"ε"};
+    ll1table[{"termp", "K_PLUS"}] = {"ε"};
+    ll1table[{"termp", "K_MINUS"}] = {"ε"};
+    ll1table[{"termp", "K_MULTIPY"}] = {"K_MULTIPY", "factor", "termp"};
+    ll1table[{"termp", "K_DIVIDE"}] = {"K_DIVIDE", "factor", "termp"};
+    ll1table[{"termp", "K_MOD"}] = {"K_MOD", "factor", "termp"};
+    ll1table[{"termp", "K_OR"}] = {"ε"};
+    ll1table[{"termp", "K_AND"}] = {"ε"};
+    ll1table[{"termp", "K_LS_THEN"}] = {"ε"};
+    ll1table[{"termp", "K_GT_THEN"}] = {"ε"};
+    ll1table[{"termp", "K_EQL_TO"}] = {"ε"};
+    ll1table[{"termp", "K_LS_EQL"}] = {"ε"};
+    ll1table[{"termp", "K_GR_EQL"}] = {"ε"};
+    ll1table[{"termp", "K_NOT_EQL"}] = {"ε"};
+    ll1table[{"termp", "K_RBRACKET"}] = {"ε"};
+
+    // Factor:
+    ll1table[{"factor", "K_LPAREN"}] = {"K_LPAREN", "expr", "K_RPAREN"};
+    // ll1table[{"factor", "T_IDENTIFIER"}] = {"id", "K_LPAREN", "exprseq", "K_RPAREN"}; 
+    ll1table[{"factor", "T_IDENTIFIER"}] = {"id", "factorp"};
+    
+    // Factor Prime:
+    ll1table[{"factorp", "K_LPAREN"}] = {"K_LPAREN", "exprseq", "K_RPAREN"};
+    ll1table[{"factorp", "K_RPAREN"}] = {"ε"};
+    ll1table[{"factorp", "K_COMMA"}] = {"ε"};
+    ll1table[{"factorp", "K_THEN"}] = {"ε"};
+    ll1table[{"factorp", "K_DO"}] = {"ε"};
+    ll1table[{"factorp", "K_PLUS"}] = {"ε"};
+    ll1table[{"factorp", "K_MINUS"}] = {"ε"};
+    ll1table[{"factorp", "K_MULTIPY"}] = {"ε"};
+    ll1table[{"factorp", "K_DIVIDE"}] = {"ε"};
+    ll1table[{"factorp", "K_MOD"}] = {"ε"};
+    ll1table[{"factorp", "K_OR"}] = {"ε"};
+    ll1table[{"factorp", "K_AND"}] = {"ε"};
+    ll1table[{"factorp", "K_LS_THEN"}] = {"ε"};
+    ll1table[{"factorp", "K_GT_THEN"}] = {"ε"};
+    ll1table[{"factorp", "K_EQL_TO"}] = {"ε"};
+    ll1table[{"factorp", "K_LS_EQL"}] = {"ε"};
+    ll1table[{"factorp", "K_GR_EQL"}] = {"ε"};
+    ll1table[{"factorp", "K_NOT_EQL"}] = {"ε"};
+    ll1table[{"factorp", "K_RBRACKET"}] = {"ε"};
+
+    // Expression Sequence:
+    ll1table[{"exprseq", "K_LPAREN"}] = {"expr", "exprseqp"};
+    ll1table[{"exprseq", "K_RPAREN"}] = {"ε"};
+    ll1table[{"exprseq", "T_IDENTIFIER"}] = {"expr", "exprseqp"};
+
+    // Expression Sequence Prime:
+    ll1table[{"exprseqp", "K_RPAREN"}] = {"ε"};
+    ll1table[{"exprseqp", "K_COMMA"}] = {"K_COMMA", "exprseq"};
+
+    // Boolean Expression:
+    ll1table[{"bexpr", "K_LPAREN"}] = {"bterm", "bexprp"};
+    ll1table[{"bexpr", "K_NOT"}] = {"bterm", "bexprp"};
+    ll1table[{"bexpr", "T_IDENTIFIER"}] = {"bterm", "bexprp"};
+
+    // Boolean Expression Prime:
+    ll1table[{"bexprp", "K_RPAREN"}] = {"ε"};
+    ll1table[{"bexprp", "K_THEN"}] = {"ε"};
+    ll1table[{"bexprp", "K_DO"}] = {"ε"};
+    ll1table[{"bexprp", "K_OR"}] = {"K_OR", "bterm", "bexprp"};
+
+    // Boolean Term:
+    ll1table[{"bterm", "K_LPAREN"}] = {"bfactor", "btermp"};
+    ll1table[{"bterm", "K_NOT"}] = {"bfactor", "btermp"};
+    ll1table[{"bterm", "T_IDENTIFIER"}] = {"bfactor", "btermp"};
+
+    // Boolean Term Prime:
+    ll1table[{"btermp", "K_RPAREN"}] = {"ε"};
+    ll1table[{"btermp", "K_THEN"}] = {"ε"};
+    ll1table[{"btermp", "K_DO"}] = {"ε"};
+    ll1table[{"btermp", "K_OR"}] = {"ε"};
+    ll1table[{"btermp", "K_AND"}] = {"K_AND", "bfactor", "btermp"};
+
+    // Boolean Factor:
+    ll1table[{"bfactor", "K_LPAREN"}] = {"bfactor", "btermp"};
+
 }
 
 /* Phases */
