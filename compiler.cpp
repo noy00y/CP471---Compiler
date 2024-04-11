@@ -8,6 +8,9 @@
 #include <map>
 #include <algorithm>
 #include <utility>
+#include <memory>
+#include <sstream>
+#include <stdexcept>
 using namespace std;
 
 /* Constants and Global Declarations: */ 
@@ -133,6 +136,27 @@ string tokenTypeToString(TokenType type) {
 }
 
 /* Classes */
+class ASTNode : public enable_shared_from_this<ASTNode> {
+public:
+    string nodeType; // Identifies the type of the node
+    string value; // Optional: For terminals or specific values
+    vector<shared_ptr<ASTNode>> children; // Child nodes
+    weak_ptr<ASTNode> parent; // Pointer to parent node
+
+    // Generic Constructor and Deconstructor
+    ASTNode(const string& type = "", const string& val = "") : nodeType(type), value(val) {}
+    virtual ~ASTNode() = default;
+
+    // Add child node for recursive decent
+    void addChild(shared_ptr<ASTNode> child) {
+        children.push_back(child);
+        child->parent = shared_from_this();
+    }
+
+    // Returns the type of the node. Can be overridden by subclasses if needed.
+    virtual string typeName() const { return nodeType; }
+};
+
 class Token {
 public:
     TokenType type; 
@@ -148,18 +172,18 @@ public:
     // Class Functions
     bool isBlank() const {
         for (char ch : buffer) {
-            if (!std::isspace(static_cast<unsigned char>(ch)))
+            if (!isspace(static_cast<unsigned char>(ch)))
                 return false;
         }
         return true;
     }
 
-    void determineType(const std::vector<std::string>& keywords) {
+    void determineType(const vector<string>& keywords) {
         if (!isBlank()) {
-            std::string tokenStr(buffer.begin(), buffer.end());
+            string tokenStr(buffer.begin(), buffer.end());
 
-            auto it = std::find_if(keywords.begin(), keywords.end(),
-                                   [&tokenStr](const std::string& keyword) {
+            auto it = find_if(keywords.begin(), keywords.end(),
+                                   [&tokenStr](const string& keyword) {
                                        return tokenStr == keyword;
                                    });
 
@@ -190,7 +214,8 @@ public:
     }
 };
 
-// Parse file stream for chars
+/* Functions */
+// Parse source code for chars and return tokens
 Token getNextToken() {
     Token token; // Token now uses its default constructor for initialization
     int currentState = 0;
@@ -347,7 +372,26 @@ Token getNextToken() {
     return token;
 }
 
-/* Functions */
+// Parse tokens from token.txt
+pair<string, string> parseTokens(ifstream& tokenStream) {
+    string line;
+    if (getline(tokenStream, line)) {
+        istringstream iss(line.substr(1, line.size() - 2)); // Remove < and >
+        string token, tokenIdentifier;
+        getline(iss, token, ',');
+        getline(iss, tokenIdentifier);
+        tokenIdentifier.erase(0, 1); // Remove leading space
+        return {token, tokenIdentifier};
+    }
+    return {"", "EOF"}; // Indicate end of file
+}
+
+// Recursively decend and match tokens:
+void recursiveDecent(const string& nonTerminal, const string& tokenIdentifier, shared_ptr<ASTNode> currentNode, ifstream& file) {
+    auto productions = ll1table[{nonTerminal, tokenIdentifier}];
+    for (const auto& p : productions) cout << "Production: " <<  p << endl;
+}
+
 // Generates Transition Table
 void generateTable() {
     ifstream file("table.txt");
@@ -634,7 +678,17 @@ void lexicalAnalysis() {
 }
 
 void syntaxAnalysis() {
-    
+    ifstream file ("tokens.txt");
+    if (!file) {
+        cerr << "Error opening file" << endl;
+        return;
+    }
+    auto root = make_shared<ASTNode>(); // Initialize root node
+
+    // Start syntax analysis if parsing if first production is correct:
+    auto [token, tokenIdentifier] = parseTokens(file);
+    if (ll1table[{"S'", tokenIdentifier}].empty()) throw runtime_error("Syntax Error: No matching production found");
+    else recursiveDecent("S'", tokenIdentifier, root, file); 
 }
 
 int main() {
@@ -653,13 +707,14 @@ int main() {
         return 1; // Return a non-zero value to indicate error
     }
 
-    // Generate keywords and transition table:
+    // Generate keywords, transition table and LL1 sparse map:
     generateTable(); 
     loadKeywords();
+    loadLL1(); // Load ll1
 
     // Run parsing
-    lexicalAnalysis();
-    loadLL1();
+    lexicalAnalysis(); // Phase 1
+    syntaxAnalysis(); // Phase 2
 
     return 0;
 }
