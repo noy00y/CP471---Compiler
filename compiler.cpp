@@ -589,6 +589,7 @@ void loadLL1() {
     // Statement Sequence Prime:
     ll1table[{"statement_seqp", "K_SEMI_COL"}] = {"K_SEMI_COL", "statement_seq"};
     ll1table[{"statement_seqp", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"statement_seqp", "K_OD"}] = {"ε"}; // grammer modification
 
     // Statement:
     ll1table[{"statement", "K_IF"}] = {"K_IF", "bexpr", "K_THEN", "statement_seq", "statementp"};
@@ -605,9 +606,11 @@ void loadLL1() {
     // Expression:
     ll1table[{"expr", "K_LPAREN"}] = {"term", "exprp"};
     ll1table[{"expr", "T_IDENTIFIER"}] = {"term", "exprp"};
+
     ll1table[{"expr", "K_FED"}] = {"ε"}; // grammer modification
-    ll1table[{"expr", "T_INT"}] = {"T_INT"};
-    ll1table[{"expr", "T_DOUBLE"}] = {"T_INT"};
+    ll1table[{"expr", "K_OD"}] = {"ε"}; // grammer modification
+    ll1table[{"expr", "T_INT"}] = {"T_INT"}; // grammer modification
+    ll1table[{"expr", "T_DOUBLE"}] = {"T_INT"}; // grammer modification
 
     // Expression Prime:
     ll1table[{"exprp", "K_SEMI_COL"}] = {"ε"};
@@ -626,12 +629,18 @@ void loadLL1() {
     ll1table[{"exprp", "K_GR_EQL"}] = {"ε"};
     ll1table[{"exprp", "K_NOT_EQL"}] = {"ε"};
     ll1table[{"exprp", "K_RBRACKET"}] = {"ε"};
+
     ll1table[{"exprp", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"exprp", "K_OD"}] = {"ε"}; // grammer modification
+
 
     // Term:
     ll1table[{"term", "K_LPAREN"}] = {"factor", "termp"};
     ll1table[{"term", "T_IDENTIFIER"}] = {"factor", "termp"};
     ll1table[{"term", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"term", "T_INT"}] = {"T_INT"}; // grammer modification
+    ll1table[{"term", "T_DOUBLE"}] = {"T_DOUBLE"}; // grammer modification
+    
 
     // Term Prime:
     ll1table[{"termp", "K_SEMI_COL"}] = {"ε"};
@@ -788,11 +797,13 @@ void syntaxAnalysis() {
 int main() {
 
     // Open Files
-    // string inputFilePath;
-    // cout << "Enter Path of file to compile: ";
-    // cin >> inputFilePath;
+    string inputFilePath;
+    cout << "Enter Path of file to compile: ";
+    cin >> inputFilePath;
 
-    inputFile.open("test cases/Test7.cp");
+    inputFilePath = "test cases/" + inputFilePath + ".cp";
+
+    inputFile.open(inputFilePath);
     tokenFile.open("tokens.txt");
     errorFile.open("errors.txt");
 
