@@ -584,6 +584,7 @@ void loadLL1() {
     ll1table[{"statement_seq", "K_RETURN"}] = {"statement", "statement_seqp"};
     ll1table[{"statement_seq", "T_IDENTIFIER"}] = {"statement", "statement_seqp"};
     ll1table[{"statement_seq", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"statement_seq", "K_OD"}] = {"ε"}; // modifications
 
     // Statement Sequence Prime:
     ll1table[{"statement_seqp", "K_SEMI_COL"}] = {"K_SEMI_COL", "statement_seq"};
@@ -605,6 +606,8 @@ void loadLL1() {
     ll1table[{"expr", "K_LPAREN"}] = {"term", "exprp"};
     ll1table[{"expr", "T_IDENTIFIER"}] = {"term", "exprp"};
     ll1table[{"expr", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"expr", "T_INT"}] = {"T_INT"};
+    ll1table[{"expr", "T_DOUBLE"}] = {"T_INT"};
 
     // Expression Prime:
     ll1table[{"exprp", "K_SEMI_COL"}] = {"ε"};
@@ -789,7 +792,7 @@ int main() {
     // cout << "Enter Path of file to compile: ";
     // cin >> inputFilePath;
 
-    inputFile.open("test cases/Test3.cp");
+    inputFile.open("test cases/Test7.cp");
     tokenFile.open("tokens.txt");
     errorFile.open("errors.txt");
 
