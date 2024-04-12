@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <cctype> 
+#include <queue>
 #include <array>
 #include <map>
 #include <algorithm>
@@ -29,6 +30,9 @@ vector<char> buffer2(BUFFER_SIZE);
 vector<char>* currentBuffer = &buffer1;
 
 // Syntax Analysis
+ifstream lexemmeFile;
+string tokenVal; // for parsing soruce file
+string tokenType;
 using ProductionRule = vector<string>; // grammer production rule
 using LL1Key = pair<string, string>; // pair of current non terminal and lookahead terminal
 using LL1table = map<LL1Key, ProductionRule>; // sparse ll1 table
@@ -147,7 +151,7 @@ public:
     ASTNode(const string& type = "", const string& val = "") : nodeType(type), value(val) {}
     virtual ~ASTNode() = default;
 
-    // Add child node for recursive decent
+    // Add child node for recursive decent and link its parent node
     void addChild(shared_ptr<ASTNode> child) {
         children.push_back(child);
         child->parent = shared_from_this();
@@ -223,7 +227,7 @@ Token getNextToken() {
 
     while (inputFile.get(currentChar)) { 
         int ascii = static_cast<int>(currentChar); // Use static_cast for conversions in C++
-        cout << "Token: " << currentChar << " --> ascii: " << ascii << ", currentState = " << currentState << endl;
+        // cout << "Token: " << currentChar << " --> ascii: " << ascii << ", currentState = " << currentState << endl;
         /* Return current token given following cases
             - relop char --> states 1, 5 and 6 and current char is != to <, > or =
             - digit char --> states 13, 15 and 18 and current char is != to 0-9, . or E/e
@@ -372,24 +376,76 @@ Token getNextToken() {
     return token;
 }
 
-// Parse tokens from token.txt
-pair<string, string> parseTokens(ifstream& tokenStream) {
+// Read each token from tokens.txt and update references. Once empty return $ token
+void parseTokens() {
     string line;
-    if (getline(tokenStream, line)) {
+    if (getline(lexemmeFile, line)) {
         istringstream iss(line.substr(1, line.size() - 2)); // Remove < and >
-        string token, tokenIdentifier;
-        getline(iss, token, ',');
-        getline(iss, tokenIdentifier);
-        tokenIdentifier.erase(0, 1); // Remove leading space
-        return {token, tokenIdentifier};
+        string val, type;
+        getline(iss, val, ',');
+        getline(iss, type);
+        type.erase(0, 1); // Remove leading space
+        
+        tokenVal = val;
+        tokenType = type;
     }
-    return {"", "EOF"}; // Indicate end of file
+    else {
+        tokenVal = "";
+        tokenType = "$"; // end of source file
+    }
+}
+
+// Debugging
+void printAST(const shared_ptr<ASTNode>& node, int level = 0) {
+    if (!node) return; // Guard against null pointers
+
+    // Print the current node with indentation based on its level in the tree
+    cout << string(level * 2, ' ') << node->typeName(); // Indent based on level
+    if (!node->value.empty()) {
+        cout << " (Value: " << node->value << ")";
+    }
+    cout << endl;
+
+    // Recursively print each child
+    for (const auto& child : node->children) {
+        printAST(child, level + 1); // Increase level for child nodes
+    }
 }
 
 // Recursively decend and match tokens:
-void recursiveDecent(const string& nonTerminal, const string& tokenIdentifier, shared_ptr<ASTNode> currentNode, ifstream& file) {
-    auto productions = ll1table[{nonTerminal, tokenIdentifier}];
-    for (const auto& p : productions) cout << "Production: " <<  p << endl;
+void recursiveDecent(const string& currProd, shared_ptr<ASTNode> currentNode, shared_ptr<ASTNode> debugRoot) {
+    if (tokenType == "$") // stop Decent if source file empty
+        return;
+
+    auto productions = ll1table[{currProd, tokenType}]; // Get production vector from <nonTerminal, tokenType> pair
+    if (productions.empty()) {
+        printAST(debugRoot);
+        throw runtime_error("Syntax Error: No production for " + currProd + " and " + tokenType + "\n"); // If blank production --> throw error
+    }
+        // throw runtime_error("Syntax Error: No production for " + currProd + " and " + tokenType); // If blank production --> throw error
+
+    /**
+     * Expand child productions recursively:
+     * - Add each child prod to tree and link parent
+     * - Case A: If ε prod --> return
+     * - Case B: If prod matches tokenType --> update child astNode val, continue parsing next production of parent with updated tokenVal and tokenType
+     * - Case C: Else --> recursive decent on current non terminal
+    */
+    for (const auto& p:productions) {
+        // Create node with prod and add it as child to currentNode
+        auto childProd = make_shared<ASTNode>(p);
+        currentNode->addChild(childProd);
+
+        // Cases
+        if (p == "ε") 
+            return;
+        else if (p == tokenType) {
+            childProd->value = tokenVal;
+            parseTokens(); // "Consume" current token by updating address to tokenVal, tokenType to next token
+            continue;
+        }
+        else recursiveDecent(p, childProd, debugRoot);
+    }
 }
 
 // Generates Transition Table
@@ -480,6 +536,8 @@ void loadLL1() {
     ll1table[{"declarations", "K_PRINT"}] = {"ε"};
     ll1table[{"declarations", "K_RETURN"}] = {"ε"};
     ll1table[{"declarations", "T_IDENTIFIER"}] = {"ε"};
+    // modifications to og grammer
+    ll1table[{"declarations", "K_DEF"}] = {"K_DEF", "type", "fname", "K_LPAREN", "params", "K_RPAREN", "declarations", "statement_seq", "K_FED"}; 
 
     // Declaration:
     ll1table[{"decl", "K_INT"}] = {"type", "varlist"};
@@ -678,17 +736,14 @@ void lexicalAnalysis() {
 }
 
 void syntaxAnalysis() {
-    ifstream file ("tokens.txt");
-    if (!file) {
-        cerr << "Error opening file" << endl;
-        return;
-    }
-    auto root = make_shared<ASTNode>(); // Initialize root node
-
+    auto root = make_shared<ASTNode>("S'"); // Start of tree
     // Start syntax analysis if parsing if first production is correct:
-    auto [token, tokenIdentifier] = parseTokens(file);
-    if (ll1table[{"S'", tokenIdentifier}].empty()) throw runtime_error("Syntax Error: No matching production found");
-    else recursiveDecent("S'", tokenIdentifier, root, file); 
+    parseTokens();
+    if (ll1table[{"S'", tokenType}].empty()) throw runtime_error("Syntax Error: No matching production found");
+    else recursiveDecent("S'", root, root); 
+
+    printAST(root);
+    cout << "Parsing Done" << endl;
 }
 
 int main() {
@@ -712,8 +767,16 @@ int main() {
     loadKeywords();
     loadLL1(); // Load ll1
 
-    // Run parsing
+    // Run parsing and open file if succesful parsing
     lexicalAnalysis(); // Phase 1
+
+    lexemmeFile.open("tokens.txt");
+    if (!lexemmeFile.is_open()) {
+        cerr << "Error opening files" << endl;
+        return 1;
+    }
+
+    // Run syntax analsis to build AST and then symbol table
     syntaxAnalysis(); // Phase 2
 
     return 0;

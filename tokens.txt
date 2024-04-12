@@ -102,4 +102,3 @@
 <(, K_LPAREN>
 <s, T_IDENTIFIER>
 <), K_RPAREN>
-<., K_DOT>
