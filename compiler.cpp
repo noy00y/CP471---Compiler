@@ -590,6 +590,8 @@ void loadLL1() {
     ll1table[{"statement_seqp", "K_SEMI_COL"}] = {"K_SEMI_COL", "statement_seq"};
     ll1table[{"statement_seqp", "K_FED"}] = {"ε"}; // grammer modification
     ll1table[{"statement_seqp", "K_OD"}] = {"ε"}; // grammer modification
+    ll1table[{"statement_seqp", "K_FI"}] = {"ε"}; // grammer modification
+    ll1table[{"statement_seqp", "K_ELSE"}] = {"ε"}; // grammer modification
 
     // Statement:
     ll1table[{"statement", "K_IF"}] = {"K_IF", "bexpr", "K_THEN", "statement_seq", "statementp"};
@@ -632,6 +634,8 @@ void loadLL1() {
 
     ll1table[{"exprp", "K_FED"}] = {"ε"}; // grammer modification
     ll1table[{"exprp", "K_OD"}] = {"ε"}; // grammer modification
+    ll1table[{"exprp", "K_FI"}] = {"ε"}; // grammer modification
+    ll1table[{"exprp", "K_ELSE"}] = {"ε"}; // grammer modification
 
 
     // Term:
@@ -640,7 +644,6 @@ void loadLL1() {
     ll1table[{"term", "K_FED"}] = {"ε"}; // grammer modification
     ll1table[{"term", "T_INT"}] = {"T_INT"}; // grammer modification
     ll1table[{"term", "T_DOUBLE"}] = {"T_DOUBLE"}; // grammer modification
-    
 
     // Term Prime:
     ll1table[{"termp", "K_SEMI_COL"}] = {"ε"};
@@ -663,6 +666,9 @@ void loadLL1() {
     ll1table[{"termp", "K_NOT_EQL"}] = {"ε"};
     ll1table[{"termp", "K_RBRACKET"}] = {"ε"};
     ll1table[{"termp", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"termp", "K_FI"}] = {"ε"}; // grammer modification
+    ll1table[{"termp", "K_ELSE"}] = {"ε"}; // grammer modification
+
 
     // Factor:
     ll1table[{"factor", "K_LPAREN"}] = {"K_LPAREN", "expr", "K_RPAREN"};
