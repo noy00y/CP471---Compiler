@@ -26,3 +26,19 @@ stack
 TODO:
 - Adjust grammer terminals based on token identification
 - load ll1 table
+
+
+Recommended Specific Node Types
+FunctionDeclarationNode: For function or method declarations, incorporating return type, name, parameters, and body.
+TypeNode: For representing types, which could be simple types like int or complex user-defined types.
+ParameterNode: For function parameters, including the parameter's type and name.
+BlockNode: For blocks of code, usually enclosed in braces {}.
+StatementNode and its subclasses:
+ReturnStatementNode: For return statements, possibly holding an expression.
+ExpressionStatementNode: For expressions that are used as statements, like function calls or assignments.
+IfStatementNode: For if statements, potentially including else branches.
+WhileStatementNode: For while loops.
+ExpressionNode and its subclasses:
+BinaryExpressionNode: For binary operations (e.g., arithmetic operations, comparisons).
+LiteralNode: For literal values (e.g., numbers, strings).
+IdentifierNode: For variable names and possibly function names in call expressions.

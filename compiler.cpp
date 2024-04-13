@@ -4,10 +4,14 @@
 #include <vector>
 #include <string>
 #include <cctype> 
+#include <queue>
 #include <array>
 #include <map>
 #include <algorithm>
 #include <utility>
+#include <memory>
+#include <sstream>
+#include <stdexcept>
 using namespace std;
 
 /* Constants and Global Declarations: */ 
@@ -19,13 +23,16 @@ ifstream inputFile;
 ofstream tokenFile;
 ofstream errorFile;
 
-vector<string> keywords(33); // eg. for, do, while, etc...
+vector<string> keywords(34); // eg. for, do, while, etc...
 array<array<int, 127>, 30> table{}; // transition table for automaton machine (30 states, 127 inputs)
 vector<char> buffer1(BUFFER_SIZE); // Dual buffers for reading 
 vector<char> buffer2(BUFFER_SIZE); 
 vector<char>* currentBuffer = &buffer1;
 
 // Syntax Analysis
+ifstream lexemmeFile;
+string tokenVal; // for parsing soruce file
+string tokenType;
 using ProductionRule = vector<string>; // grammer production rule
 using LL1Key = pair<string, string>; // pair of current non terminal and lookahead terminal
 using LL1table = map<LL1Key, ProductionRule>; // sparse ll1 table
@@ -133,6 +140,27 @@ string tokenTypeToString(TokenType type) {
 }
 
 /* Classes */
+class ASTNode : public enable_shared_from_this<ASTNode> {
+public:
+    string nodeType; // Identifies the type of the node
+    string value; // Optional: For terminals or specific values
+    vector<shared_ptr<ASTNode>> children; // Child nodes
+    weak_ptr<ASTNode> parent; // Pointer to parent node
+
+    // Generic Constructor and Deconstructor
+    ASTNode(const string& type = "", const string& val = "") : nodeType(type), value(val) {}
+    virtual ~ASTNode() = default;
+
+    // Add child node for recursive decent and link its parent node
+    void addChild(shared_ptr<ASTNode> child) {
+        children.push_back(child);
+        child->parent = shared_from_this();
+    }
+
+    // Returns the type of the node. Can be overridden by subclasses if needed.
+    virtual string typeName() const { return nodeType; }
+};
+
 class Token {
 public:
     TokenType type; 
@@ -148,18 +176,18 @@ public:
     // Class Functions
     bool isBlank() const {
         for (char ch : buffer) {
-            if (!std::isspace(static_cast<unsigned char>(ch)))
+            if (!isspace(static_cast<unsigned char>(ch)))
                 return false;
         }
         return true;
     }
 
-    void determineType(const std::vector<std::string>& keywords) {
+    void determineType(const vector<string>& keywords) {
         if (!isBlank()) {
-            std::string tokenStr(buffer.begin(), buffer.end());
+            string tokenStr(buffer.begin(), buffer.end());
 
-            auto it = std::find_if(keywords.begin(), keywords.end(),
-                                   [&tokenStr](const std::string& keyword) {
+            auto it = find_if(keywords.begin(), keywords.end(),
+                                   [&tokenStr](const string& keyword) {
                                        return tokenStr == keyword;
                                    });
 
@@ -190,7 +218,8 @@ public:
     }
 };
 
-// Parse file stream for chars
+/* Functions */
+// Parse source code for chars and return tokens
 Token getNextToken() {
     Token token; // Token now uses its default constructor for initialization
     int currentState = 0;
@@ -198,7 +227,7 @@ Token getNextToken() {
 
     while (inputFile.get(currentChar)) { 
         int ascii = static_cast<int>(currentChar); // Use static_cast for conversions in C++
-        cout << "Token: " << currentChar << " --> ascii: " << ascii << ", currentState = " << currentState << endl;
+        // cout << "Token: " << currentChar << " --> ascii: " << ascii << ", currentState = " << currentState << endl;
         /* Return current token given following cases
             - relop char --> states 1, 5 and 6 and current char is != to <, > or =
             - digit char --> states 13, 15 and 18 and current char is != to 0-9, . or E/e
@@ -310,6 +339,7 @@ Token getNextToken() {
             else if (ascii == 43) token.type = TokenType::K_PLUS;
             else if (ascii == 59) token.type = TokenType::K_SEMI_COL;
             else if (ascii == 44) token.type = TokenType::K_COMMA;
+            else if (ascii == 47) token.type = TokenType::K_DIVIDE;
 
             return token;
         }
@@ -347,7 +377,98 @@ Token getNextToken() {
     return token;
 }
 
-/* Functions */
+// Read each token from tokens.txt and update references. Once empty return $ token
+void parseTokens() {
+    string line;
+    if (getline(lexemmeFile, line)) {
+        istringstream iss(line.substr(1, line.size() - 2)); // Remove < and >
+        string val, type;
+        getline(iss, val, ',');
+        getline(iss, type);
+        type.erase(0, 1); // Remove leading space
+        
+        tokenVal = val;
+        tokenType = type;
+    }
+    else {
+        tokenVal = "";
+        tokenType = "$"; // end of source file
+    }
+}
+
+// Debugging
+void printAST(const shared_ptr<ASTNode>& node, int level = 0) {
+    if (!node) return; // Guard against null pointers
+
+    // Print the current node with indentation based on its level in the tree
+    cout << string(level * 2, ' ') << node->typeName(); // Indent based on level
+    if (!node->value.empty()) {
+        cout << " (Value: " << node->value << ")";
+    } 
+    cout << endl;
+
+    // Recursively print each child
+    for (const auto& child : node->children) {
+        printAST(child, level + 1); // Increase level for child nodes
+    }
+}
+
+string trim(const string& str) {
+    string ws = " \t\n\r\f\v"; // Include all white-space characters you care about
+
+    // Find the first character position after excluding leading white space
+    size_t start = str.find_first_not_of(ws);
+
+    // Check if all characters are whitespace
+    if (start == string::npos) {
+        return ""; // An empty string
+    }
+
+    // Find the last character position before excluding trailing white space
+    size_t end = str.find_last_not_of(ws);
+
+    // Return the trimmed string
+    return str.substr(start, end - start + 1);
+}
+
+// Recursively decend and match tokens:
+void recursiveDecent(const string& currProd, shared_ptr<ASTNode> currentNode, shared_ptr<ASTNode> debugRoot) {
+    if (tokenType == "$") return; // stop Decent if source file empty
+    else if (tokenType == " K_COMMA") {
+        tokenType = "K_COMMA";
+        tokenVal = ",";
+    }
+
+    auto productions = ll1table[{currProd, tokenType}]; // Get production vector from <nonTerminal, tokenType> pair
+    if (productions.empty()) {
+        printAST(debugRoot);
+        throw runtime_error("Syntax Error: No production for " + currProd + " and " + tokenType + "\n"); // If blank production --> throw error
+    }
+
+    /**
+     * Expand child productions recursively:
+     * - Add each child prod to tree and link parent
+     * - Case A: If ε prod --> return
+     * - Case B: If prod matches tokenType --> update child astNode val, continue parsing next production of parent with updated tokenVal and tokenType
+     * - Case C: Else --> recursive decent on current non terminal
+    */
+    for (const auto& p:productions) {
+        // Create node with prod and add it as child to currentNode
+        auto childProd = make_shared<ASTNode>(p);
+        currentNode->addChild(childProd);
+
+        // Cases
+        if (p == "ε") 
+            return;
+        else if (p == tokenType) {
+            childProd->value = tokenVal;
+            parseTokens(); // "Consume" current token by updating address to tokenVal, tokenType to next token
+            continue;
+        }
+        else recursiveDecent(p, childProd, debugRoot);
+    }
+}
+
 // Generates Transition Table
 void generateTable() {
     ifstream file("table.txt");
@@ -436,7 +557,10 @@ void loadLL1() {
     ll1table[{"declarations", "K_PRINT"}] = {"ε"};
     ll1table[{"declarations", "K_RETURN"}] = {"ε"};
     ll1table[{"declarations", "T_IDENTIFIER"}] = {"ε"};
-
+    // modifications to og grammer
+    // ll1table[{"declarations", "K_DEF"}] = {"K_DEF", "type", "fname", "K_LPAREN", "params", "K_RPAREN", "declarations", "statement_seq", "K_FED"}; 
+    ll1table[{"declarations", "K_DEF"}] = {"fdecls"}; 
+    
     // Declaration:
     ll1table[{"decl", "K_INT"}] = {"type", "varlist"};
     ll1table[{"decl", "K_DOUBLE"}] = {"type", "varlist"};
@@ -460,9 +584,16 @@ void loadLL1() {
     ll1table[{"statement_seq", "K_PRINT"}] = {"statement", "statement_seqp"};
     ll1table[{"statement_seq", "K_RETURN"}] = {"statement", "statement_seqp"};
     ll1table[{"statement_seq", "T_IDENTIFIER"}] = {"statement", "statement_seqp"};
+    ll1table[{"statement_seq", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"statement_seq", "K_OD"}] = {"ε"}; // modifications
 
     // Statement Sequence Prime:
     ll1table[{"statement_seqp", "K_SEMI_COL"}] = {"K_SEMI_COL", "statement_seq"};
+    ll1table[{"statement_seqp", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"statement_seqp", "K_OD"}] = {"ε"}; // grammer modification
+    ll1table[{"statement_seqp", "K_FI"}] = {"ε"}; // grammer modification
+    ll1table[{"statement_seqp", "K_ELSE"}] = {"ε"}; // grammer modification
+    ll1table[{"statement_seqp", "K_MULTIPY"}] = {"K_MULTIPY", "factor", "termp"};
 
     // Statement:
     ll1table[{"statement", "K_IF"}] = {"K_IF", "bexpr", "K_THEN", "statement_seq", "statementp"};
@@ -470,6 +601,7 @@ void loadLL1() {
     ll1table[{"statement", "K_PRINT"}] = {"K_PRINT", "expr"};
     ll1table[{"statement", "K_RETURN"}] = {"K_RETURN", "expr"};
     ll1table[{"statement", "T_IDENTIFIER"}] = {"var", "K_EQL", "expr"};
+    ll1table[{"statement", "K_FED"}] = {"ε"}; // grammer modification
 
     // Statement Prime:
     ll1table[{"statementp", "K_FI"}] = {"K_FI"};
@@ -478,6 +610,11 @@ void loadLL1() {
     // Expression:
     ll1table[{"expr", "K_LPAREN"}] = {"term", "exprp"};
     ll1table[{"expr", "T_IDENTIFIER"}] = {"term", "exprp"};
+
+    ll1table[{"expr", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"expr", "K_OD"}] = {"ε"}; // grammer modification
+    ll1table[{"expr", "T_INT"}] = {"T_INT"}; // grammer modification
+    ll1table[{"expr", "T_DOUBLE"}] = {"T_DOUBLE"}; // grammer modification
 
     // Expression Prime:
     ll1table[{"exprp", "K_SEMI_COL"}] = {"ε"};
@@ -497,9 +634,18 @@ void loadLL1() {
     ll1table[{"exprp", "K_NOT_EQL"}] = {"ε"};
     ll1table[{"exprp", "K_RBRACKET"}] = {"ε"};
 
+    ll1table[{"exprp", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"exprp", "K_OD"}] = {"ε"}; // grammer modification
+    ll1table[{"exprp", "K_FI"}] = {"ε"}; // grammer modification
+    ll1table[{"exprp", "K_ELSE"}] = {"ε"}; // grammer modification
+
+
     // Term:
     ll1table[{"term", "K_LPAREN"}] = {"factor", "termp"};
     ll1table[{"term", "T_IDENTIFIER"}] = {"factor", "termp"};
+    ll1table[{"term", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"term", "T_INT"}] = {"T_INT"}; // grammer modification
+    ll1table[{"term", "T_DOUBLE"}] = {"T_DOUBLE"}; // grammer modification
 
     // Term Prime:
     ll1table[{"termp", "K_SEMI_COL"}] = {"ε"};
@@ -521,12 +667,20 @@ void loadLL1() {
     ll1table[{"termp", "K_GR_EQL"}] = {"ε"};
     ll1table[{"termp", "K_NOT_EQL"}] = {"ε"};
     ll1table[{"termp", "K_RBRACKET"}] = {"ε"};
+    ll1table[{"termp", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"termp", "K_FI"}] = {"ε"}; // grammer modification
+    ll1table[{"termp", "K_ELSE"}] = {"ε"}; // grammer modification
+
 
     // Factor:
     ll1table[{"factor", "K_LPAREN"}] = {"K_LPAREN", "expr", "K_RPAREN"};
     // ll1table[{"factor", "T_IDENTIFIER"}] = {"id", "K_LPAREN", "exprseq", "K_RPAREN"}; 
     ll1table[{"factor", "T_IDENTIFIER"}] = {"id", "factorp"};
-    
+    ll1table[{"factor", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"factor", "T_INT"}] = {"T_INT"}; // grammer modification
+    ll1table[{"factor", "T_DOUBLE"}] = {"T_DOUBLE"}; // grammer modification
+
+
     // Factor Prime:
     ll1table[{"factorp", "K_LPAREN"}] = {"K_LPAREN", "exprseq", "K_RPAREN"};
     ll1table[{"factorp", "K_RPAREN"}] = {"ε"};
@@ -547,11 +701,20 @@ void loadLL1() {
     ll1table[{"factorp", "K_GR_EQL"}] = {"ε"};
     ll1table[{"factorp", "K_NOT_EQL"}] = {"ε"};
     ll1table[{"factorp", "K_RBRACKET"}] = {"ε"};
+    
+    ll1table[{"factorp", "K_SEMI_COL"}] = {"ε"}; // grammer modification
+    ll1table[{"factorp", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"factorp", "K_ELSE"}] = {"ε"}; // grammer modification
+    ll1table[{"factorp", "K_FI"}] = {"ε"}; // grammer modification
+
 
     // Expression Sequence:
     ll1table[{"exprseq", "K_LPAREN"}] = {"expr", "exprseqp"};
     ll1table[{"exprseq", "K_RPAREN"}] = {"ε"};
     ll1table[{"exprseq", "T_IDENTIFIER"}] = {"expr", "exprseqp"};
+    // Mising from grammer --> needed modification
+    ll1table[{"exprseq", "T_DOUBLE"}] = {"T_DOUBLE", "exprseqp"}; 
+    ll1table[{"exprseq", "T_INT"}] = {"T_INT", "exprseqp"}; 
 
     // Expression Sequence Prime:
     ll1table[{"exprseqp", "K_RPAREN"}] = {"ε"};
@@ -634,17 +797,26 @@ void lexicalAnalysis() {
 }
 
 void syntaxAnalysis() {
-    
+    auto root = make_shared<ASTNode>("S'"); // Start of tree
+    // Start syntax analysis if parsing if first production is correct:
+    parseTokens();
+    if (ll1table[{"S'", tokenType}].empty()) throw runtime_error("Syntax Error: No matching production found");
+    else recursiveDecent("S'", root, root); 
+
+    printAST(root);
+    cout << "Parsing Done" << endl;
 }
 
 int main() {
 
     // Open Files
-    // string inputFilePath;
-    // cout << "Enter Path of file to compile: ";
-    // cin >> inputFilePath;
+    string inputFilePath;
+    cout << "Enter Path of file to compile: ";
+    cin >> inputFilePath;
 
-    inputFile.open("test cases/Test3.cp");
+    inputFilePath = "test cases/" + inputFilePath + ".cp";
+
+    inputFile.open(inputFilePath);
     tokenFile.open("tokens.txt");
     errorFile.open("errors.txt");
 
@@ -653,13 +825,21 @@ int main() {
         return 1; // Return a non-zero value to indicate error
     }
 
-    // Generate keywords and transition table:
+    // Generate keywords, transition table and LL1 sparse map:
     generateTable(); 
     loadKeywords();
+    loadLL1(); // Load ll1
 
-    // Run parsing
-    lexicalAnalysis();
-    loadLL1();
+    // Run parsing and open file if succesful parsing
+    lexicalAnalysis(); // Phase 1
+    lexemmeFile.open("tokens.txt");
+    if (!lexemmeFile.is_open()) {
+        cerr << "Error opening files" << endl;
+        return 1;
+    }
+
+    // Run syntax analsis to build AST and then symbol table
+    syntaxAnalysis(); // Phase 2
 
     return 0;
 }
