@@ -23,7 +23,7 @@ ifstream inputFile;
 ofstream tokenFile;
 ofstream errorFile;
 
-vector<string> keywords(33); // eg. for, do, while, etc...
+vector<string> keywords(34); // eg. for, do, while, etc...
 array<array<int, 127>, 30> table{}; // transition table for automaton machine (30 states, 127 inputs)
 vector<char> buffer1(BUFFER_SIZE); // Dual buffers for reading 
 vector<char> buffer2(BUFFER_SIZE); 
@@ -339,6 +339,7 @@ Token getNextToken() {
             else if (ascii == 43) token.type = TokenType::K_PLUS;
             else if (ascii == 59) token.type = TokenType::K_SEMI_COL;
             else if (ascii == 44) token.type = TokenType::K_COMMA;
+            else if (ascii == 47) token.type = TokenType::K_DIVIDE;
 
             return token;
         }
@@ -592,6 +593,7 @@ void loadLL1() {
     ll1table[{"statement_seqp", "K_OD"}] = {"ε"}; // grammer modification
     ll1table[{"statement_seqp", "K_FI"}] = {"ε"}; // grammer modification
     ll1table[{"statement_seqp", "K_ELSE"}] = {"ε"}; // grammer modification
+    ll1table[{"statement_seqp", "K_MULTIPY"}] = {"K_MULTIPY", "factor", "termp"};
 
     // Statement:
     ll1table[{"statement", "K_IF"}] = {"K_IF", "bexpr", "K_THEN", "statement_seq", "statementp"};
@@ -612,7 +614,7 @@ void loadLL1() {
     ll1table[{"expr", "K_FED"}] = {"ε"}; // grammer modification
     ll1table[{"expr", "K_OD"}] = {"ε"}; // grammer modification
     ll1table[{"expr", "T_INT"}] = {"T_INT"}; // grammer modification
-    ll1table[{"expr", "T_DOUBLE"}] = {"T_INT"}; // grammer modification
+    ll1table[{"expr", "T_DOUBLE"}] = {"T_DOUBLE"}; // grammer modification
 
     // Expression Prime:
     ll1table[{"exprp", "K_SEMI_COL"}] = {"ε"};
@@ -675,6 +677,9 @@ void loadLL1() {
     // ll1table[{"factor", "T_IDENTIFIER"}] = {"id", "K_LPAREN", "exprseq", "K_RPAREN"}; 
     ll1table[{"factor", "T_IDENTIFIER"}] = {"id", "factorp"};
     ll1table[{"factor", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"factor", "T_INT"}] = {"T_INT"}; // grammer modification
+    ll1table[{"factor", "T_DOUBLE"}] = {"T_DOUBLE"}; // grammer modification
+
 
     // Factor Prime:
     ll1table[{"factorp", "K_LPAREN"}] = {"K_LPAREN", "exprseq", "K_RPAREN"};
@@ -699,6 +704,8 @@ void loadLL1() {
     
     ll1table[{"factorp", "K_SEMI_COL"}] = {"ε"}; // grammer modification
     ll1table[{"factorp", "K_FED"}] = {"ε"}; // grammer modification
+    ll1table[{"factorp", "K_ELSE"}] = {"ε"}; // grammer modification
+    ll1table[{"factorp", "K_FI"}] = {"ε"}; // grammer modification
 
 
     // Expression Sequence:
