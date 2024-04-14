@@ -771,6 +771,11 @@ void loadLL1() {
     ll1table[{"id", "T_IDENTIFIER"}] = {"T_IDENTIFIER"};
 }
 
+// Generates symbol table from parse tree:
+void generateSymbolTable(shared_ptr<ASTNode> root) {
+
+}
+
 /* Phases */
 void lexicalAnalysis() {
 	// Initialize: temp token for storing, line and character for tracking position

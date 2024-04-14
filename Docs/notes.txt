@@ -1,33 +1,21 @@
-methods
-- recursive decent --> not recommended
-- stack method
-- ast
+Semantic Analysis:
+- to ensure declarations and statements in the code is semantically correct (ie. is it compileable)
+- utilizes ast and symbol table
+- Key tasks performed
+    - type checking: each operator has the same operands (eg. double with double) or operand has correct assignmentSD
+    - checking semantic errors: type mismatches, undeclared variables, reserved keyword misuse
 
-ADJUST THE GRAMMER FOR TOKENS
-- be specific with keyword tokens
-
-ast
-- elegance 
-- pass the ast into the 3rd phase
-- don't have to run the grammer again
-- if small modifications in the grammer --> easy to modify
-- back tracking
-    - at any one of the branches a error happens --> it stops producing and returns from there
-    - going to try to run the rest of the grammer
-    - if even one error don't run phase 3
-- ast is weird most tre 
-
-stack
-- in the stack you have to run the grammer again
-- easier approach
-- integrate phase 3 and phase 2
-- push the progroam to stack --> push the production --> look at where the top symbol where it is
+Symbol Table:
+- Role of symbol table
+    - Records info regarding each identifer (function names, variables) found from the source program
+    - identifier info includes type, scope (context in where the variable is defined) and location (line + char)
+    - aids in intermediate code generation once code is deemed semantically valid
 
 TODO:
 - Adjust grammer terminals based on token identification
 - load ll1 table
 
-
+Notes:
 Recommended Specific Node Types
 FunctionDeclarationNode: For function or method declarations, incorporating return type, name, parameters, and body.
 TypeNode: For representing types, which could be simple types like int or complex user-defined types.
