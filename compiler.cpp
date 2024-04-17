@@ -144,11 +144,13 @@ string tokenTypeToString(TokenType type) {
 
 struct SymbolEntry {
     string type; // K_DEF, K_IF, K_WHILE, K_INT, K_DOUBLE
-    union {int intVal; double doubleVal;}; // for int or double var declarations
     shared_ptr<class SymbolTable> childTable; // child table for new scope (functions, if or while)
+    string varName; // symbol name for K_DEF, or K_INT/K_DOUBLE
+
+    // Specific to K_IF:
+    union {int intVal; double doubleVal;}; // for int or double var declarations (eg. int x = 4;)
     
     // Specific to K_DEF
-    string fname; 
     string returnType; // K_INT or K_DOUBLE
     vector<pair<string, string>> params; // function params (type, var)
 };
@@ -808,17 +810,14 @@ void extractParams(const shared_ptr<ASTNode>& paramsNode, vector<pair<string, st
     string paramName;
 
     for (const auto& child : paramsNode->children) {
+        // Get var type
         if (child->nodeType == "type" && !child->children.empty()) {
-            // Get the type of the parameter
             paramType = child->children.front()->value;
+        // Get var name
         } else if (child->nodeType == "var" && !child->children.empty()) {
-            // Assuming 'var' contains 'id' which in turn has the parameter name
-            auto idNode = child->children.front();
-            if (idNode && idNode->nodeType == "id") {
-                paramName = idNode->value;
-            }
-        } else if (child->nodeType == "paramsp" and child->children.front()->nodeType != "ε") {
-            // Recursive call if there are more parameters
+            paramName = child->children.front()->children.front()->value;
+        // Recurse
+        } else if (child->nodeType == "paramsp" && child->children.front()->nodeType != "ε") {
             extractParams(child->children[1], parameters);
         }
     }
@@ -830,12 +829,29 @@ void extractParams(const shared_ptr<ASTNode>& paramsNode, vector<pair<string, st
 }
 
 // Recursively Extract Variables:
-void extractVars(const shared_ptr<ASTNode>& paramsNode, const shared_ptr<SymbolTable>& table) {
-    
+void extractVars(const shared_ptr<ASTNode>& varlistNode, const shared_ptr<SymbolTable>& table, string type) {
+    if (varlistNode) return;
+
+    string varName;
+    for (const auto& child: varlistNode->children) {
+        if (child->nodeType == "var") {
+            varName = child->children.front()->children.front()->value;
+        } else if (child->nodeType == "varlistp" && child->children.front()->nodeType != "ε") {
+            extractVars(child->children[1], table, type);
+        }
+    }
+
+    // Only add vars that have varname defined
+    if (!varName.empty()) {
+        SymbolEntry entry;
+        entry.type = type;
+        entry.varName = varName;
+        table->addEntry(varName, entry);
+    }
 }
 
 // Generates symbol table from parse tree:
-void populateSymbolTable(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
+void populateSymbolTable(shared_ptr<ASTNode> &node, shared_ptr<SymbolTable>& table) {
     if (!node) return;
 
     // If function, if or while --> create child symbol table and set that to scope
@@ -850,34 +866,29 @@ void populateSymbolTable(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table
             // Loop through children of fdec and grab vals
             for (const auto& child : parent->children) {
                 if (child->nodeType == "type") entry.returnType = child->children.front()->nodeType; // fdec->type->K_INT or K_DOUBLE
-                if (child->nodeType == "fname") entry.fname = child->children.front()->children.front()->value; // fdec->fname->id->T_IDENTIFIER
+                if (child->nodeType == "fname") entry.varName = child->children.front()->children.front()->value; // fdec->fname->id->T_IDENTIFIER
                 if (child->nodeType == "params") extractParams(child, entry.params); // recursively extract params
             }
-            table->addEntry(entry.fname, entry);
+            table->addEntry(entry.varName, entry);
         }
         table = entry.childTable;
+    }
 
     // If variable declaration
-    } else if (node->nodeType == "K_INT" || node->nodeType == "K_DOUBLE") {
-        auto parent = node->parent.lock()->parent.lock(); // K_INT --> type --> decl
-        if (parent->nodeType == "decl") extractVars(parent, table);
+    else if (node->nodeType == "K_INT" || node->nodeType == "K_DOUBLE") {
+        auto varlistNode = node->parent.lock()->parent.lock()->children[1]; // K_INT --> type --> decl --> varlist
+        if (varlistNode->nodeType == "varlist") extractVars(varlistNode, table, node->nodeType);
+    }
 
-        // SymbolEntry entry;
-        // entry.type = node->nodeType;
-        
-        // entry.intVal = (node->nodeType == "K_INT") ? stoi(node->value) : 0;
-        // entry.doubleVal = (node->nodeType == "K_DOUBLE") ? stod(node->value) : 0.0;
-
-        // table->addEntry(node->value, entry);
+    // Exit Scope:
+    else if (node->nodeType == "K_FED" || node->nodeType == "K_FI" || node->nodeType == "K_OD") {
+        table = table->parentTable;
     }
 
     // Process all nodes:
     for (auto& child: node->children) {
         populateSymbolTable(child, table);
     }
-
-    // Exit Scope:
-
 }
 
 /* Phases */
@@ -920,7 +931,7 @@ void syntaxAnalysis() {
     auto rootSymbolTable = make_shared<SymbolTable>("global");
     populateSymbolTable(root, rootSymbolTable);
 
-
+    cout << "Done Building symbol Table" << endl;
 }
 
 void semanticAnalysis() {

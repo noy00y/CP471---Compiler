@@ -15,7 +15,6 @@ fed;
 int x,y;
 int z;
 x=12; y=15;
-
 z=gcd(x,y);
 print(z);
 
