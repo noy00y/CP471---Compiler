@@ -29,6 +29,9 @@ vector<char> buffer1(BUFFER_SIZE); // Dual buffers for reading
 vector<char> buffer2(BUFFER_SIZE); 
 vector<char>* currentBuffer = &buffer1;
 
+int character = 0; 
+int line = 0; // track line while parsing
+
 // Syntax Analysis
 ifstream lexemmeFile;
 string tokenVal; // for parsing soruce file
@@ -38,7 +41,7 @@ using LL1Key = pair<string, string>; // pair of current non terminal and lookahe
 using LL1table = map<LL1Key, ProductionRule>; // sparse ll1 table
 LL1table ll1table;
 
-/* Structs */
+/* Structs and Enums*/
 enum TokenType {
     // General
     T_IDENTIFIER,
@@ -139,7 +142,32 @@ string tokenTypeToString(TokenType type) {
     }
 }
 
+struct SymbolEntry {
+    string type; // K_DEF, K_IF, K_WHILE, K_INT, K_DOUBLE
+    union {int intVal; double doubleVal;}; // for int or double var declarations
+    shared_ptr<class SymbolTable> childTable; // child table for new scope (functions, if or while)
+    
+    // Specific to K_DEF
+    string fname; 
+    string returnType; // K_INT or K_DOUBLE
+    vector<pair<string, string>> params; // function params (type, var)
+};
+
 /* Classes */
+class SymbolTable {
+public:
+    string scopeName;
+    map<string, SymbolEntry> table;
+    shared_ptr<SymbolTable> parentTable;
+
+    SymbolTable(const string& name, shared_ptr<SymbolTable> parent = nullptr)
+        : scopeName(name), parentTable(parent) {}
+
+    void addEntry(const string& name, const SymbolEntry& entry) {
+        table[name] = entry;
+    }
+};
+
 class ASTNode : public enable_shared_from_this<ASTNode> {
 public:
     string nodeType; // Identifies the type of the node
@@ -224,6 +252,7 @@ Token getNextToken() {
     Token token; // Token now uses its default constructor for initialization
     int currentState = 0;
     char currentChar;
+    int character = 0; // track token positions
 
     while (inputFile.get(currentChar)) { 
         int ascii = static_cast<int>(currentChar); // Use static_cast for conversions in C++
@@ -242,6 +271,8 @@ Token getNextToken() {
             else if (currentState == 5) token.type = TokenType::K_EQL;
             else if (currentState == 6) token.type = TokenType::K_GT_THEN;
 
+            token.character = character;
+            token.line = line;
             return token;
         }
 
@@ -250,13 +281,17 @@ Token getNextToken() {
             inputFile.unget();
             if (currentState == 13) token.type = TokenType::T_INT;
             else if (currentState == 15 || currentState == 18) token.type = TokenType::T_DOUBLE;
+            token.character = character;
+            token.line = line;
             return token;
         }
 
         else if ((currentState == 10) && (ascii < 97 || ascii > 122)) {
             // cout << "Return " << currentChar << " w/ ascii = " << ascii << " back to the file stream" << endl;
             inputFile.unget(); // Put character back into stream
-            token.determineType(keywords);            
+            token.determineType(keywords);      
+            token.character = character;   
+            token.line = line;   
             return token;
         }
 
@@ -271,6 +306,7 @@ Token getNextToken() {
         
         // If ws or \n --> set state 100, 
         else if (ascii == 32 || ascii == 10) {
+            if (ascii == 10) line += 1; // increment line count
             currentState = table[currentState][ascii];
             // cout << "Token: " << currentChar << " w/ ascii: " << ascii << " is ws --> currentState = " << currentState << endl;
         }
@@ -297,7 +333,8 @@ Token getNextToken() {
                 if (ascii == 43) token.type = TokenType::K_PLUS;
                 else if (ascii == 45) token.type = TokenType::K_MINUS;
                 else if (ascii == 46) token.type = TokenType::K_DOT;
-
+                token.character = character;
+                token.line = line;
                 return token;
             }
             // cout << "Token: " << currentChar << " w/ ascii: " << ascii << " is +-. --> currentState = " << currentState << endl;
@@ -341,6 +378,8 @@ Token getNextToken() {
             else if (ascii == 44) token.type = TokenType::K_COMMA;
             else if (ascii == 47) token.type = TokenType::K_DIVIDE;
 
+            token.character = character;
+            token.line = line;
             return token;
         }
 
@@ -354,6 +393,8 @@ Token getNextToken() {
             else if (currentState == 7) token.type = TokenType::K_GR_EQL;
             else if (currentState == 9) token.type = TokenType::K_EQL_TO;
 
+            token.character = character;
+            token.line = line;
             return token;
         }
 
@@ -364,14 +405,20 @@ Token getNextToken() {
             if (currentState == 4) token.type = TokenType::K_GT_THEN;
             else if (currentState == 8) token.type = TokenType::K_LS_THEN;
 
+            token.character = character;
+            token.line = line;
             return token;
         }
 
         // Accept Identifer if at 100
         else if (currentState == 100) {
-            token.determineType(keywords);        
+            token.determineType(keywords);     
+            token.character = character;   
+            token.line = line;
             return token;
         }
+
+        character += 1;
     }
     token.type = TokenType::T_EOF;
     return token;
@@ -411,24 +458,6 @@ void printAST(const shared_ptr<ASTNode>& node, int level = 0) {
     for (const auto& child : node->children) {
         printAST(child, level + 1); // Increase level for child nodes
     }
-}
-
-string trim(const string& str) {
-    string ws = " \t\n\r\f\v"; // Include all white-space characters you care about
-
-    // Find the first character position after excluding leading white space
-    size_t start = str.find_first_not_of(ws);
-
-    // Check if all characters are whitespace
-    if (start == string::npos) {
-        return ""; // An empty string
-    }
-
-    // Find the last character position before excluding trailing white space
-    size_t end = str.find_last_not_of(ws);
-
-    // Return the trimmed string
-    return str.substr(start, end - start + 1);
 }
 
 // Recursively decend and match tokens:
@@ -771,13 +800,88 @@ void loadLL1() {
     ll1table[{"id", "T_IDENTIFIER"}] = {"T_IDENTIFIER"};
 }
 
+// Recursively Extract params from ast
+void extractParams(const shared_ptr<ASTNode>& paramsNode, vector<pair<string, string>>& parameters) {
+    if (!paramsNode) return;
+
+    string paramType;
+    string paramName;
+
+    for (const auto& child : paramsNode->children) {
+        if (child->nodeType == "type" && !child->children.empty()) {
+            // Get the type of the parameter
+            paramType = child->children.front()->value;
+        } else if (child->nodeType == "var" && !child->children.empty()) {
+            // Assuming 'var' contains 'id' which in turn has the parameter name
+            auto idNode = child->children.front();
+            if (idNode && idNode->nodeType == "id") {
+                paramName = idNode->value;
+            }
+        } else if (child->nodeType == "paramsp" and child->children.front()->nodeType != "ε") {
+            // Recursive call if there are more parameters
+            extractParams(child->children[1], parameters);
+        }
+    }
+
+    // Only add parameters that have both type and name defined
+    if (!paramType.empty() && !paramName.empty()) {
+        parameters.emplace_back(paramType, paramName);
+    }
+}
+
+// Recursively Extract Variables:
+void extractVars(const shared_ptr<ASTNode>& paramsNode, const shared_ptr<SymbolTable>& table) {
+    
+}
+
 // Generates symbol table from parse tree:
-void generateSymbolTable(shared_ptr<ASTNode> root) {
+void populateSymbolTable(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
+    if (!node) return;
+
+    // If function, if or while --> create child symbol table and set that to scope
+    if (node->nodeType == "K_DEF" || node->nodeType == "K_IF" || node->nodeType == "K_WHILE") {
+        SymbolEntry entry;
+        entry.type = node->nodeType;
+        entry.childTable = make_shared<SymbolTable>(node->nodeType, table);
+
+        // If function get fname, type and function params
+        if (node->nodeType == "K_DEF") {
+            auto parent = node->parent.lock(); // K_DEF --> fdec
+            // Loop through children of fdec and grab vals
+            for (const auto& child : parent->children) {
+                if (child->nodeType == "type") entry.returnType = child->children.front()->nodeType; // fdec->type->K_INT or K_DOUBLE
+                if (child->nodeType == "fname") entry.fname = child->children.front()->children.front()->value; // fdec->fname->id->T_IDENTIFIER
+                if (child->nodeType == "params") extractParams(child, entry.params); // recursively extract params
+            }
+            table->addEntry(entry.fname, entry);
+        }
+        table = entry.childTable;
+
+    // If variable declaration
+    } else if (node->nodeType == "K_INT" || node->nodeType == "K_DOUBLE") {
+        auto parent = node->parent.lock()->parent.lock(); // K_INT --> type --> decl
+        if (parent->nodeType == "decl") extractVars(parent, table);
+
+        // SymbolEntry entry;
+        // entry.type = node->nodeType;
+        
+        // entry.intVal = (node->nodeType == "K_INT") ? stoi(node->value) : 0;
+        // entry.doubleVal = (node->nodeType == "K_DOUBLE") ? stod(node->value) : 0.0;
+
+        // table->addEntry(node->value, entry);
+    }
+
+    // Process all nodes:
+    for (auto& child: node->children) {
+        populateSymbolTable(child, table);
+    }
+
+    // Exit Scope:
 
 }
 
 /* Phases */
-void lexicalAnalysis() {
+void lexicalAnalysis(vector<Token>& tokenList) {
 	// Initialize: temp token for storing, line and character for tracking position
     Token token;
     bool isFirstToken = true; 
@@ -788,6 +892,7 @@ void lexicalAnalysis() {
             break;
         }
         if (!token.isBlank()) {
+            tokenList.push_back(token); // add token to list
 			// Convert token.buffer (vector<char>) to string for printing
             string tokenContent(token.buffer.begin(), token.buffer.end());
             string tokenTypeStr = tokenTypeToString(token.type);
@@ -810,6 +915,16 @@ void syntaxAnalysis() {
 
     printAST(root);
     cout << "Parsing Done" << endl;
+
+    // Generate symbol table:
+    auto rootSymbolTable = make_shared<SymbolTable>("global");
+    populateSymbolTable(root, rootSymbolTable);
+
+
+}
+
+void semanticAnalysis() {
+
 }
 
 int main() {
@@ -836,7 +951,9 @@ int main() {
     loadLL1(); // Load ll1
 
     // Run parsing and open file if succesful parsing
-    lexicalAnalysis(); // Phase 1
+    vector<Token> tokenList;
+    lexicalAnalysis(tokenList); // Phase 1
+
     lexemmeFile.open("tokens.txt");
     if (!lexemmeFile.is_open()) {
         cerr << "Error opening files" << endl;
