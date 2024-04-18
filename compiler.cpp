@@ -830,7 +830,7 @@ void extractParams(const shared_ptr<ASTNode>& paramsNode, vector<pair<string, st
 
 // Recursively Extract Variables:
 void extractVars(const shared_ptr<ASTNode>& varlistNode, const shared_ptr<SymbolTable>& table, string type) {
-    if (varlistNode) return;
+    if (!varlistNode) return;
 
     string varName;
     for (const auto& child: varlistNode->children) {
