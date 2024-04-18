@@ -1,7 +1,7 @@
 def int gcd(int a, int b)
 int r;
-if a<0 then a = -a fi;
-if b<0 then b = -b fi;
+if a<0 then a = a fi;
+if b<0 then b = b fi;
 
 if a<b then r=a; a=b; b=r fi;
 while (b<>0) do
@@ -12,9 +12,9 @@ od;
 return(a)
 fed;
 
-int x,y,z;
+int x,y;
+int z;
 x=12; y=15;
-
 z=gcd(x,y);
 print(z);
 
