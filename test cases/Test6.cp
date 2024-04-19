@@ -5,6 +5,7 @@ if b<0 then b = b fi;
 
 if a<b then r=a; a=b; b=r fi;
 while (b<>0) do
+	int n = 4;
 	r = a % b;
 	a=b;
 	b=r;
@@ -15,7 +16,7 @@ fed;
 int x,y;
 int z;
 x=12; y=15;
-z=gcd(x,y);
+z=gcd(x,15.15);
 print(z);
 
 z=gcd(x+y, y);

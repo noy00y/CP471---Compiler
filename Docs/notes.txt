@@ -30,3 +30,8 @@ ExpressionNode and its subclasses:
 BinaryExpressionNode: For binary operations (e.g., arithmetic operations, comparisons).
 LiteralNode: For literal values (e.g., numbers, strings).
 IdentifierNode: For variable names and possibly function names in call expressions.
+
+
+
+- add panic mode (
+- do semantic anaylsis and phase 4 first

@@ -100,7 +100,7 @@
 <(, K_LPAREN>
 <x, T_IDENTIFIER>
 <,, K_COMMA>
-<y, T_IDENTIFIER>
+<15.15, T_DOUBLE>
 <), K_RPAREN>
 <;, K_SEMI_COL>
 <print, K_PRINT>
