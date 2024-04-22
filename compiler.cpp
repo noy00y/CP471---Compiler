@@ -755,6 +755,8 @@ void loadLL1() {
     ll1table[{"bexpr", "K_LPAREN"}] = {"bterm", "bexprp"};
     ll1table[{"bexpr", "K_NOT"}] = {"bterm", "bexprp"};
     ll1table[{"bexpr", "T_IDENTIFIER"}] = {"bterm", "bexprp"};
+    ll1table[{"bexpr", "T_INT"}] = {"T_INT", "comp", "expr"}; // grammer modification
+
 
     // Boolean Expression Prime:
     ll1table[{"bexprp", "K_RPAREN"}] = {"ε"};
@@ -917,7 +919,8 @@ void lexicalAnalysis(vector<Token>& tokenList) {
     }
 }
 
-void syntaxAnalysis() {
+// Parses Token File and returns abstract syntax tree
+shared_ptr<ASTNode> syntaxAnalysis() {
     auto root = make_shared<ASTNode>("S'"); // Start of tree
     // Start syntax analysis if parsing if first production is correct:
     parseTokens();
@@ -926,15 +929,68 @@ void syntaxAnalysis() {
 
     printAST(root);
     cout << "Parsing Done" << endl;
+    return root;
+}
 
-    // Generate symbol table:
+// Builds symbol table from AST
+shared_ptr<SymbolTable> generateSymbolTable(shared_ptr<ASTNode> root) {
     auto rootSymbolTable = make_shared<SymbolTable>("global");
     populateSymbolTable(root, rootSymbolTable);
 
     cout << "Done Building symbol Table" << endl;
+    return rootSymbolTable;
 }
 
-void semanticAnalysis() {
+// Perform semantic checking
+void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
+    if (!node) return;
+
+    
+    /** 
+     * Statement containing boolean expression
+     * Check following semantics
+     * - for var that is T_IDENTIFIER --> check scope
+     * - both operands should be K/T_INT
+    */
+    if (node->nodeType == "statement" && node->children[1]->nodeType == "bexpr") {
+        auto bexprNode = node->children[1];
+        ASTNode var1;
+        ASTNode var2;
+
+        /** First operand is T_IDENTIFIER
+         * Set var1 to bexpr->bterm->bfactor->expr->term->factor->id->T_IDENTIFIER
+         * Set var2 to either
+         * - Case A: if expr->term then var2 = bexpr->bterm->bfactor[2]=expr->term->factor->id-T_IDENTIFIER
+         * - Case B: if expr->T_INT then var2 = bexpr->bterm->bfactor[2]=expr->T_INT
+        */
+        if (bexprNode->children.front()->nodeType == "bterm" && bexprNode->children.front()->children.front()->children.front()->nodeType == "expr") {
+            var1 = *bexprNode->children.front()->children.front()->children.front()->children.front()->children.front()->children.front()->children.front();
+            if (bexprNode->children.front()->children.front()->children[2]->children.front()->nodeType == "term") {
+                var2 = *bexprNode->children.front()->children.front()->children[2]->children.front()->children.front()->children.front()->children.front();
+            } else var2 = *bexprNode->children.front()->children.front()->children[2]->children.front();
+        }
+
+        else if (bexprNode->children.front()->nodeType == "bterm" && bexprNode->children.front()->children.front()->children.front()->nodeType != "expr") {
+            
+        }
+
+        // First operand is T_INT
+        else if (bexprNode->children.front()->nodeType == "T_INT") {
+            var1 = *bexprNode->children.front();
+            var2 = *bexprNode->children[2]->children.front()->children.front()->children.front()->children.front();
+        }
+
+        cout << "Var 1: " << var1.value << ", Var 2: " << var2.value << endl; 
+    }
+
+    // Process all nodes
+    for (auto& child: node->children) {
+        semanticAnalysis(child, table);
+    }
+}
+
+// Generate intermediate code for compiling
+void create3TAC() {
 
 }
 
@@ -961,7 +1017,7 @@ int main() {
     loadKeywords();
     loadLL1(); // Load ll1
 
-    // Run parsing and open file if succesful parsing
+    // Phase 1: Run lexical parsing and open file if succesful
     vector<Token> tokenList;
     lexicalAnalysis(tokenList); // Phase 1
 
@@ -971,8 +1027,12 @@ int main() {
         return 1;
     }
 
-    // Run syntax analsis to build AST and then symbol table
-    syntaxAnalysis(); // Phase 2
+    // Phase 2: Run syntax analysis to build AST and then generate symbol table
+    auto root = syntaxAnalysis(); 
+    auto symbolTable = generateSymbolTable(root);
+
+    // Phase 3: Perform semantic analysis
+    semanticAnalysis(root, symbolTable);
 
     return 0;
 }
