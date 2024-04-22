@@ -108,6 +108,16 @@
 <z, T_IDENTIFIER>
 <), K_RPAREN>
 <;, K_SEMI_COL>
+<if, K_IF>
+<a, T_IDENTIFIER>
+<<, K_LS_THEN>
+<0, T_INT>
+<then, K_THEN>
+<a, T_IDENTIFIER>
+<=, K_EQL>
+<a, T_IDENTIFIER>
+<fi, K_FI>
+<;, K_SEMI_COL>
 <z, T_IDENTIFIER>
 <=, K_EQL>
 <gcd, T_IDENTIFIER>
@@ -139,3 +149,4 @@
 <(, K_LPAREN>
 <z, T_IDENTIFIER>
 <), K_RPAREN>
+<., K_DOT>

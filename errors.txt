@@ -1,1 +1,1 @@
-Declaration Error at q in gcd
+Declaration Error at a in global

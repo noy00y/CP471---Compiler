@@ -17,7 +17,7 @@ int z;
 x=12; y=15;
 z=gcd(x,15);
 print(z);
-
+if a<0 then a = a fi;
 z=gcd(x+y, y);
 print(z);
 

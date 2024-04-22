@@ -961,8 +961,10 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
     if (!node) return;
 
     // Update Scope for tracking
-    if (node->nodeType == "fdec") scope = node->children[2]->children.front()->children.front()->value;
-    else if (node->nodeType == "fed") scope = "global";
+    if (node->nodeType == "fdec") 
+        scope = node->children[2]->children.front()->children.front()->value;
+    else if (node->nodeType == "K_FED") 
+        scope = "global";
 
     /** 
      * Statement containing boolean expression
@@ -1051,15 +1053,20 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
 
         // Global Scope --> get symbol entries
         else {
-            if (var1.nodeType == "T_IDENTIFIER" && table->findEntry(var1.value)) {
-                
+            if (var1.nodeType == "T_IDENTIFIER") {
+                if (table->findEntry(var1.value)) {
+                    auto varEntry = table->findEntry(var1.value);
+                    if (varEntry->type != "K_INT") errorFile << "Type Error at " << var1.value << " in " << scope << endl;
+                } else errorFile << "Declaration Error at " << var1.value << " in " << scope << endl;
             }
 
             if (var2.nodeType == "T_IDENTIFIER") {
-
+                if (table->findEntry(var2.value)) {
+                    auto varEntry = table->findEntry(var2.value);
+                    if (varEntry->type != "K_INT") errorFile << "Type Error at " << var2.value << " in " << scope << endl;
+                } else errorFile << "Declaration Error at " << var2.value << " in " << scope << endl;
             }
         }
-
     }
 
     // Process all nodes
