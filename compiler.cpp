@@ -971,7 +971,9 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
         }
 
         else if (bexprNode->children.front()->nodeType == "bterm" && bexprNode->children.front()->children.front()->children.front()->nodeType != "expr") {
-            
+            auto bfactorNode = bexprNode->children.front()->children.front()->children[1]->children.front()->children.front();
+            var1 = *bfactorNode->children.front()->children.front()->children.front()->children.front()->children.front();
+            var2 = *bfactorNode->children[2]->children.front();
         }
 
         // First operand is T_INT

@@ -22,9 +22,9 @@
 <fi, K_FI>
 <;, K_SEMI_COL>
 <if, K_IF>
-<b, T_IDENTIFIER>
-<<, K_LS_THEN>
 <0, T_INT>
+<<, K_LS_THEN>
+<b, T_IDENTIFIER>
 <then, K_THEN>
 <b, T_IDENTIFIER>
 <=, K_EQL>
@@ -100,7 +100,7 @@
 <(, K_LPAREN>
 <x, T_IDENTIFIER>
 <,, K_COMMA>
-<15.15, T_DOUBLE>
+<15, T_INT>
 <), K_RPAREN>
 <;, K_SEMI_COL>
 <print, K_PRINT>
@@ -139,3 +139,4 @@
 <(, K_LPAREN>
 <z, T_IDENTIFIER>
 <), K_RPAREN>
+<., K_DOT>
