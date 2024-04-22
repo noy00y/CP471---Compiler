@@ -1,2 +1,1 @@
-Type Error at a in gcd
-Type Error at a in gcd
+Declaration Error at q in gcd

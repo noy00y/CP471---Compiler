@@ -829,7 +829,7 @@ void extractParams(const shared_ptr<ASTNode>& paramsNode, vector<pair<string, st
     for (const auto& child : paramsNode->children) {
         // Get var type
         if (child->nodeType == "type" && !child->children.empty()) {
-            paramType = child->children.front()->value;
+            paramType = child->children.front()->nodeType;
         // Get var name
         } else if (child->nodeType == "var" && !child->children.empty()) {
             paramName = child->children.front()->children.front()->value;
@@ -1018,9 +1018,13 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
                 else {
                     bool found = false;
                     for (const auto& p : functionEntry->params) {
-                        if (p.second == var1.value) found = true; break;
+                        if (p.second == var1.value) {
+                            found = true; 
+                            if (p.first != "K_INT") errorFile << "Type Error at " << var1.value << " in " << scope << endl;
+                            break;
+                        }
                     }
-                    if (!found) errorFile << "Type Error at " << var1.value << " in " << scope << endl;
+                    if (!found) errorFile << "Declaration Error at " << var1.value << " in " << scope << endl;
                 }
             }
 
@@ -1034,16 +1038,26 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
                 else {
                     bool found = false;
                     for (const auto& p : functionEntry->params) {
-                        if (p.second == var2.value) found = true; break;
+                        if (p.second == var2.value) {
+                            found = true; 
+                            if (p.first != "K_INT") errorFile << "Type Error at " << var2.value << " in " << scope << endl;
+                            break;
+                        }
                     }
-                    if (!found) errorFile << "Type Error at " << var2.value << " in " << scope << endl;
+                    if (!found) errorFile << "Declaration Error at " << var2.value << " in " << scope << endl;
                 }
             }
         }
 
-        // 
+        // Global Scope --> get symbol entries
         else {
-            
+            if (var1.nodeType == "T_IDENTIFIER" && table->findEntry(var1.value)) {
+                
+            }
+
+            if (var2.nodeType == "T_IDENTIFIER") {
+
+            }
         }
 
     }
