@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <utility>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 using namespace std;
@@ -40,6 +41,9 @@ using ProductionRule = vector<string>; // grammer production rule
 using LL1Key = pair<string, string>; // pair of current non terminal and lookahead terminal
 using LL1table = map<LL1Key, ProductionRule>; // sparse ll1 table
 LL1table ll1table;
+
+// Semantic Analysis
+string scope = "global";
 
 /* Structs and Enums*/
 enum TokenType {
@@ -167,6 +171,17 @@ public:
 
     void addEntry(const string& name, const SymbolEntry& entry) {
         table[name] = entry;
+    }
+
+    // Function to find an entry in the current table or in any parent table.
+    optional<SymbolEntry> findEntry(const string& name) {
+        auto it = table.find(name);
+        if (it != table.end()) {
+            return it->second;
+        } else if (parentTable) {
+            return parentTable->findEntry(name);
+        }
+        return nullopt;  
     }
 };
 
@@ -945,7 +960,10 @@ shared_ptr<SymbolTable> generateSymbolTable(shared_ptr<ASTNode> root) {
 void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
     if (!node) return;
 
-    
+    // Update Scope for tracking
+    if (node->nodeType == "fdec") scope = node->children[2]->children.front()->children.front()->value;
+    else if (node->nodeType == "fed") scope = "global";
+
     /** 
      * Statement containing boolean expression
      * Check following semantics
@@ -983,6 +1001,51 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
         }
 
         cout << "Var 1: " << var1.value << ", Var 2: " << var2.value << endl; 
+
+        // If Scope is function --> get symbol entry and function table
+        if (scope != "global") {
+            auto functionEntry = table->findEntry(scope);
+            auto functionTable = functionEntry->childTable;
+
+            // Check Semantics
+            if (var1.nodeType == "T_IDENTIFIER") {
+                // If var exists in function table and is K_INT --> valid, else --> type error
+                if (functionTable->findEntry(var1.value)) {
+                    auto varEntry = functionTable->findEntry(var1.value);
+                    if (varEntry->type != "K_INT") errorFile << "Type Error at " << var1.value << " in " << scope << endl;
+                }
+                // Check for var in function params
+                else {
+                    bool found = false;
+                    for (const auto& p : functionEntry->params) {
+                        if (p.second == var1.value) found = true; break;
+                    }
+                    if (!found) errorFile << "Type Error at " << var1.value << " in " << scope << endl;
+                }
+            }
+
+            if (var2.nodeType == "T_IDENTIFIER") {
+                // If var exists in function table and is K_INT --> valid, else --> type error
+                if (functionTable->findEntry(var2.value)) {
+                    auto varEntry = functionTable->findEntry(var2.value);
+                    if (varEntry->type != "K_INT") errorFile << "Type Error at " << var2.value << " in " << scope << endl;
+                }
+                // Check for var in function params
+                else {
+                    bool found = false;
+                    for (const auto& p : functionEntry->params) {
+                        if (p.second == var2.value) found = true; break;
+                    }
+                    if (!found) errorFile << "Type Error at " << var2.value << " in " << scope << endl;
+                }
+            }
+        }
+
+        // 
+        else {
+            
+        }
+
     }
 
     // Process all nodes
