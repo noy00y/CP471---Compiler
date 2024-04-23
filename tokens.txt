@@ -8,7 +8,7 @@
 <int, K_INT>
 <b, T_IDENTIFIER>
 <), K_RPAREN>
-<double, K_DOUBLE>
+<int, K_INT>
 <r, T_IDENTIFIER>
 <;, K_SEMI_COL>
 <if, K_IF>

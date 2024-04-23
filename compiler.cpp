@@ -845,7 +845,7 @@ void extractParams(const shared_ptr<ASTNode>& paramsNode, vector<pair<string, st
     }
 }
 
-// Recursively Extract Variables:
+// Functions for extracting various ASTNode branches:
 void extractVars(const shared_ptr<ASTNode>& varlistNode, const shared_ptr<SymbolTable>& table, string type) {
     if (!varlistNode) return;
 
