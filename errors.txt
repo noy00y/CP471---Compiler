@@ -1,1 +1,5 @@
-Declaration Error at a in global
+Declaration Error at f in gcd
+Declaration Error at n in gcd
+Declaration Error at o in gcd
+Declaration Error at q in gcd
+Declaration Error at c in gcd

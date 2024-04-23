@@ -850,7 +850,7 @@ void extractVars(const shared_ptr<ASTNode>& varlistNode, const shared_ptr<Symbol
     if (!varlistNode) return;
 
     string varName;
-    for (const auto& child: varlistNode->children) {
+    for (const auto& child : varlistNode->children) {
         if (child->nodeType == "var") {
             varName = child->children.front()->children.front()->value;
         } else if (child->nodeType == "varlistp" && child->children.front()->nodeType != "ε") {
@@ -864,6 +864,20 @@ void extractVars(const shared_ptr<ASTNode>& varlistNode, const shared_ptr<Symbol
         entry.type = type;
         entry.varName = varName;
         table->addEntry(varName, entry);
+    }
+}
+
+void extractExpr(const shared_ptr<ASTNode>& exprNode, vector<shared_ptr<ASTNode>>& varList) {
+    if (!exprNode) return;
+
+    // Add vars to list:
+    if (exprNode->nodeType == "T_IDENTIFIER" || exprNode->nodeType == "T_DOUBLE" || exprNode->nodeType == "T_INT") {
+        varList.push_back(exprNode);
+    }
+
+    // Recurse
+    for (const auto& child : exprNode->children) {
+        extractExpr(child, varList);
     }
 }
 
@@ -1068,7 +1082,67 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
             }
         }
     }
+    
+    /** 
+     * Statement containing var and expression
+     * Check following semantics
+     * - all vars should be in scope
+     * - all operands should be matching a = b * c --> typeof(a=b=c)
+    */   
+    else if (node->nodeType == "statement" && node->children.front()->nodeType == "var") {
+        vector<shared_ptr<ASTNode>> varList;
+        varList.push_back(node->children.front()->children.front()->children.front()); // add first var
+        string stmtType; // stores type of first var in expression 
+    
+        // Perform semantic check on function and global scope expressions 
+        if (scope != "global") {
+            auto functionEntry = table->findEntry(scope);
+            auto functionTable = functionEntry->childTable;
 
+            // Check for var in function scope or function params --> else declaration error
+            if (functionTable->findEntry(varList.front()->value)) {
+                auto varEntry = functionTable->findEntry(varList.front()->value);
+                stmtType = varEntry->type;
+            }
+            
+            else {
+                bool found = false;
+                for (const auto& p : functionEntry->params) {
+                    if (p.second == varList.front()->value) {
+                        found = true; 
+                        stmtType = p.first;
+                        break;
+                    }
+                }
+                if (!found) errorFile << "Declaration Error at " << varList.front()->value << " in " << scope << endl;
+            }
+        
+            // Extract expression vars and perform semantic checks (scope then type)
+            extractExpr(node->children[2], varList);
+            for (const auto& var : varList){
+                // Check for var in function scope or function params --> else declaration error
+                if (functionTable->findEntry(var->value)) {
+                    auto varEntry = functionTable->findEntry(var->value);
+                    if (varEntry->type != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                }
+                // Check for var in function params
+                else {
+                    bool found = false;
+                    for (const auto& p : functionEntry->params) {
+                        if (p.second == var->value) {
+                            found = true; 
+                            if (p.first != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                            break;
+                        }
+                    }
+                    if (!found) errorFile << "Declaration Error at " << var->value << " in " << scope << endl;
+                }
+            }
+        }
+
+
+    }
+    
     // Process all nodes
     for (auto& child: node->children) {
         semanticAnalysis(child, table);
