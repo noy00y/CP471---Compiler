@@ -5,28 +5,16 @@ Semantic Analysis:
     - type checking: each operator has the same operands (eg. double with double) or operand has correct assignmentSD
     - checking semantic errors: type mismatches, undeclared variables, reserved keyword misuse
 
-Symbol Table:
-- Role of symbol table
-    - Records info regarding each identifer (function names, variables) found from the source program
-    - identifier info includes type, scope (context in where the variable is defined) and location (line + char)
-    - aids in intermediate code generation once code is deemed semantically valid
-
 TODO:
-- Adjust grammer terminals based on token identification
-- load ll1 table
+- do semantic anaylsis and phase 4 first
+- add panic mode
 
-Notes:
-Recommended Specific Node Types
-FunctionDeclarationNode: For function or method declarations, incorporating return type, name, parameters, and body.
-TypeNode: For representing types, which could be simple types like int or complex user-defined types.
-ParameterNode: For function parameters, including the parameter's type and name.
-BlockNode: For blocks of code, usually enclosed in braces {}.
-StatementNode and its subclasses:
-ReturnStatementNode: For return statements, possibly holding an expression.
-ExpressionStatementNode: For expressions that are used as statements, like function calls or assignments.
-IfStatementNode: For if statements, potentially including else branches.
-WhileStatementNode: For while loops.
-ExpressionNode and its subclasses:
-BinaryExpressionNode: For binary operations (e.g., arithmetic operations, comparisons).
-LiteralNode: For literal values (e.g., numbers, strings).
-IdentifierNode: For variable names and possibly function names in call expressions.
+Debugging:
+- Test Cases: Valid Test Cases
+    - Test 1
+    - Test 4
+    - Test 5
+    - Test 6
+    - Test 7
+    - Test 8
+    - Test 9

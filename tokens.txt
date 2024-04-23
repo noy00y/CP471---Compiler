@@ -8,7 +8,7 @@
 <int, K_INT>
 <b, T_IDENTIFIER>
 <), K_RPAREN>
-<int, K_INT>
+<double, K_DOUBLE>
 <r, T_IDENTIFIER>
 <;, K_SEMI_COL>
 <if, K_IF>
@@ -22,9 +22,9 @@
 <fi, K_FI>
 <;, K_SEMI_COL>
 <if, K_IF>
-<b, T_IDENTIFIER>
-<<, K_LS_THEN>
 <0, T_INT>
+<<, K_LS_THEN>
+<b, T_IDENTIFIER>
 <then, K_THEN>
 <b, T_IDENTIFIER>
 <=, K_EQL>
@@ -35,6 +35,10 @@
 <a, T_IDENTIFIER>
 <<, K_LS_THEN>
 <b, T_IDENTIFIER>
+<and, K_AND>
+<b, T_IDENTIFIER>
+<<, K_LS_THEN>
+<r, T_IDENTIFIER>
 <then, K_THEN>
 <r, T_IDENTIFIER>
 <=, K_EQL>
@@ -58,9 +62,21 @@
 <do, K_DO>
 <r, T_IDENTIFIER>
 <=, K_EQL>
+<f, T_IDENTIFIER>
+<*, K_MULTIPY>
+<n, T_IDENTIFIER>
+<+, K_PLUS>
 <a, T_IDENTIFIER>
+<+, K_PLUS>
+<o, T_IDENTIFIER>
 <%, K_MOD>
 <b, T_IDENTIFIER>
+<*, K_MULTIPY>
+<q, T_IDENTIFIER>
+<+, K_PLUS>
+<c, T_IDENTIFIER>
+<-, K_MINUS>
+<z, T_IDENTIFIER>
 <;, K_SEMI_COL>
 <a, T_IDENTIFIER>
 <=, K_EQL>
@@ -100,7 +116,7 @@
 <(, K_LPAREN>
 <x, T_IDENTIFIER>
 <,, K_COMMA>
-<y, T_IDENTIFIER>
+<15, T_INT>
 <), K_RPAREN>
 <;, K_SEMI_COL>
 <print, K_PRINT>
@@ -139,3 +155,4 @@
 <(, K_LPAREN>
 <z, T_IDENTIFIER>
 <), K_RPAREN>
+<., K_DOT>

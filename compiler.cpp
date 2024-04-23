@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <utility>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 using namespace std;
@@ -40,6 +41,9 @@ using ProductionRule = vector<string>; // grammer production rule
 using LL1Key = pair<string, string>; // pair of current non terminal and lookahead terminal
 using LL1table = map<LL1Key, ProductionRule>; // sparse ll1 table
 LL1table ll1table;
+
+// Semantic Analysis
+string scope = "global";
 
 /* Structs and Enums*/
 enum TokenType {
@@ -167,6 +171,17 @@ public:
 
     void addEntry(const string& name, const SymbolEntry& entry) {
         table[name] = entry;
+    }
+
+    // Function to find an entry in the current table or in any parent table.
+    optional<SymbolEntry> findEntry(const string& name) {
+        auto it = table.find(name);
+        if (it != table.end()) {
+            return it->second;
+        } else if (parentTable) {
+            return parentTable->findEntry(name);
+        }
+        return nullopt;  
     }
 };
 
@@ -755,6 +770,8 @@ void loadLL1() {
     ll1table[{"bexpr", "K_LPAREN"}] = {"bterm", "bexprp"};
     ll1table[{"bexpr", "K_NOT"}] = {"bterm", "bexprp"};
     ll1table[{"bexpr", "T_IDENTIFIER"}] = {"bterm", "bexprp"};
+    ll1table[{"bexpr", "T_INT"}] = {"T_INT", "comp", "expr"}; // grammer modification
+
 
     // Boolean Expression Prime:
     ll1table[{"bexprp", "K_RPAREN"}] = {"ε"};
@@ -812,7 +829,7 @@ void extractParams(const shared_ptr<ASTNode>& paramsNode, vector<pair<string, st
     for (const auto& child : paramsNode->children) {
         // Get var type
         if (child->nodeType == "type" && !child->children.empty()) {
-            paramType = child->children.front()->value;
+            paramType = child->children.front()->nodeType;
         // Get var name
         } else if (child->nodeType == "var" && !child->children.empty()) {
             paramName = child->children.front()->children.front()->value;
@@ -833,7 +850,7 @@ void extractVars(const shared_ptr<ASTNode>& varlistNode, const shared_ptr<Symbol
     if (!varlistNode) return;
 
     string varName;
-    for (const auto& child: varlistNode->children) {
+    for (const auto& child : varlistNode->children) {
         if (child->nodeType == "var") {
             varName = child->children.front()->children.front()->value;
         } else if (child->nodeType == "varlistp" && child->children.front()->nodeType != "ε") {
@@ -848,6 +865,26 @@ void extractVars(const shared_ptr<ASTNode>& varlistNode, const shared_ptr<Symbol
         entry.varName = varName;
         table->addEntry(varName, entry);
     }
+}
+
+void extractExpr(const shared_ptr<ASTNode>& exprNode, vector<shared_ptr<ASTNode>>& varList) {
+    if (!exprNode) return;
+
+    // Add vars to list:
+    if (exprNode->nodeType == "T_IDENTIFIER" || exprNode->nodeType == "T_DOUBLE" || exprNode->nodeType == "T_INT") varList.push_back(exprNode);
+
+    // Recurse
+    for (const auto& child : exprNode->children) extractExpr(child, varList);
+}
+
+void extractBexpr(const shared_ptr<ASTNode>& bexprNode, vector<shared_ptr<ASTNode>>& bexprList) {
+    if (!bexprNode) return;
+
+    // Add vars to list
+    if (bexprNode->nodeType == "T_IDENTIFIER" || bexprNode->nodeType == "T_INT") bexprList.push_back(bexprNode);
+
+    // Recurse
+    for (const auto& child: bexprNode->children) extractBexpr(child, bexprList);
 }
 
 // Generates symbol table from parse tree:
@@ -917,7 +954,8 @@ void lexicalAnalysis(vector<Token>& tokenList) {
     }
 }
 
-void syntaxAnalysis() {
+// Parses Token File and returns abstract syntax tree
+shared_ptr<ASTNode> syntaxAnalysis() {
     auto root = make_shared<ASTNode>("S'"); // Start of tree
     // Start syntax analysis if parsing if first production is correct:
     parseTokens();
@@ -926,15 +964,175 @@ void syntaxAnalysis() {
 
     printAST(root);
     cout << "Parsing Done" << endl;
+    return root;
+}
 
-    // Generate symbol table:
+// Builds symbol table from AST
+shared_ptr<SymbolTable> generateSymbolTable(shared_ptr<ASTNode> root) {
     auto rootSymbolTable = make_shared<SymbolTable>("global");
     populateSymbolTable(root, rootSymbolTable);
 
     cout << "Done Building symbol Table" << endl;
+    return rootSymbolTable;
 }
 
-void semanticAnalysis() {
+// Perform semantic checking
+void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
+    if (!node) return;
+
+    // Update Scope for tracking
+    if (node->nodeType == "fdec") 
+        scope = node->children[2]->children.front()->children.front()->value;
+    else if (node->nodeType == "K_FED") 
+        scope = "global";
+
+    /** 
+     * Statement containing boolean expression
+     * Check following semantics
+     * - for var that is T_IDENTIFIER --> check scope
+     * - both operands should be K/T_INT
+    */
+    if (node->nodeType == "statement" && node->children[1]->nodeType == "bexpr") {
+        vector<shared_ptr<ASTNode>> bexprList;
+
+        // If Scope is function --> get symbol entry and function table
+        if (scope != "global") {
+            auto functionEntry = table->findEntry(scope);
+            auto functionTable = functionEntry->childTable;
+
+            extractBexpr(node->children[1], bexprList); // Extract operands from boolean expression
+
+            // Perform Semantic checking
+            for (const auto& var : bexprList) {
+                if (functionTable->findEntry(var->value)) {
+                    auto varEntry = functionTable->findEntry(var->value);
+                    if (varEntry->type != "K_INT") errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                }
+                else if (var->nodeType == "T_INT") continue;
+                else {
+                    bool found = false;
+                    for (const auto& p : functionEntry->params) {
+                        if (p.second == var->value) {
+                            found = true; 
+                            if (p.first != "K_INT") errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                            break;
+                        }
+                    }
+                    if (!found) errorFile << "Declaration Error at " << var->value << " in " << scope << endl;
+                }
+            }
+        }
+
+        // Global Scope --> get symbol entries
+        else {
+            extractBexpr(node->children[1], bexprList); // Extract operands from boolean expression
+            
+            // Perform Semantic checking
+            for (const auto& var : bexprList) {
+                if (table->findEntry(var->value)) {
+                    auto varEntry = table->findEntry(var->value);
+                    if (varEntry->type != "K_INT") errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                }
+                else if (var->nodeType == "T_INT") continue;
+                else errorFile << "Declaration Error at " << var->value << " in " << scope << endl;
+            }
+        }
+    }
+    
+    /** 
+     * Statement containing var and expression
+     * Check following semantics
+     * - all vars should be in scope
+     * - all operands should be matching a = b * c --> typeof(a=b=c)
+    */   
+    else if (node->nodeType == "statement" && node->children.front()->nodeType == "var") {
+        vector<shared_ptr<ASTNode>> varList;
+        varList.push_back(node->children.front()->children.front()->children.front()); // add first var
+        string stmtType; // stores type of first var in expression 
+    
+        // Perform semantic check on function and global scope expressions 
+        if (scope != "global") {
+            auto functionEntry = table->findEntry(scope);
+            auto functionTable = functionEntry->childTable;
+
+            // Check for first var in function scope or function params --> else declaration error
+            if (functionTable->findEntry(varList.front()->value)) {
+                auto varEntry = functionTable->findEntry(varList.front()->value);
+                stmtType = varEntry->type;
+            }
+            
+            else {
+                bool found = false;
+                for (const auto& p : functionEntry->params) {
+                    if (p.second == varList.front()->value) {
+                        found = true; 
+                        stmtType = p.first;
+                        break;
+                    }
+                }
+                if (!found) errorFile << "Declaration Error at " << varList.front()->value << " in " << scope << endl;
+            }
+        
+            // Extract expression vars and perform semantic checks (scope then type)
+            extractExpr(node->children[2], varList);
+            for (const auto& var : varList) {
+                // Check for var in function scope, or if var is a int/double literal or function params --> else declaration error
+                if (functionTable->findEntry(var->value)) {
+                    auto varEntry = functionTable->findEntry(var->value);
+                    if (varEntry->type != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                } 
+                else if (var->nodeType == "T_INT" || var->nodeType == "T_DOUBLE") {
+                    if (var->nodeType == "T_INT" && stmtType == "K_INT") continue;
+                    else if (var->nodeType == "T_DOUBLE" && stmtType == "K_DOUBLE") continue;
+                    else errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                }
+                // Check for var in function params
+                else {
+                    bool found = false;
+                    for (const auto& p : functionEntry->params) {
+                        if (p.second == var->value) {
+                            found = true; 
+                            if (p.first != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                            break;
+                        }
+                    }
+                    if (!found) errorFile << "Declaration Error at " << var->value << " in " << scope << endl;
+                }
+            }
+        }
+
+        else {
+            // Check for first var global scope and assign statement type
+            if (table->findEntry(varList.front()->value)) {
+                auto varEntry = table->findEntry(varList.front()->value);
+                stmtType = varEntry->type;
+            } else errorFile << "Declaration Error at " << varList.front()->value << " in " << scope << endl;
+
+            // Extract expression vars and perform semantic checks (scope then type)
+            extractExpr(node->children[2], varList);
+            for (const auto& var : varList) {
+                if (table->findEntry(var->value)) {
+                    auto varEntry = table->findEntry(var->value);
+                    if (varEntry->type != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                } 
+                else if (var->nodeType == "T_INT" || var->nodeType == "T_DOUBLE") {
+                    if (var->nodeType == "T_INT" && stmtType == "K_INT") continue;
+                    else if (var->nodeType == "T_DOUBLE" && stmtType == "K_DOUBLE") continue;
+                    else errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                }
+                else errorFile << "Declaration Error at " << var->value << " in " << scope << endl;
+            }
+        }
+    }
+    
+    // Process all nodes
+    for (auto& child: node->children) {
+        semanticAnalysis(child, table);
+    }
+}
+
+// Generate intermediate code for compiling
+void create3TAC() {
 
 }
 
@@ -961,7 +1159,7 @@ int main() {
     loadKeywords();
     loadLL1(); // Load ll1
 
-    // Run parsing and open file if succesful parsing
+    // Phase 1: Run lexical parsing and open file if succesful
     vector<Token> tokenList;
     lexicalAnalysis(tokenList); // Phase 1
 
@@ -971,8 +1169,12 @@ int main() {
         return 1;
     }
 
-    // Run syntax analsis to build AST and then symbol table
-    syntaxAnalysis(); // Phase 2
+    // Phase 2: Run syntax analysis to build AST and then generate symbol table
+    auto root = syntaxAnalysis(); 
+    auto symbolTable = generateSymbolTable(root);
+
+    // Phase 3: Perform semantic analysis
+    semanticAnalysis(root, symbolTable);
 
     return 0;
 }
