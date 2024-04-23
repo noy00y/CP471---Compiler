@@ -871,14 +871,20 @@ void extractExpr(const shared_ptr<ASTNode>& exprNode, vector<shared_ptr<ASTNode>
     if (!exprNode) return;
 
     // Add vars to list:
-    if (exprNode->nodeType == "T_IDENTIFIER" || exprNode->nodeType == "T_DOUBLE" || exprNode->nodeType == "T_INT") {
-        varList.push_back(exprNode);
-    }
+    if (exprNode->nodeType == "T_IDENTIFIER" || exprNode->nodeType == "T_DOUBLE" || exprNode->nodeType == "T_INT") varList.push_back(exprNode);
 
     // Recurse
-    for (const auto& child : exprNode->children) {
-        extractExpr(child, varList);
-    }
+    for (const auto& child : exprNode->children) extractExpr(child, varList);
+}
+
+void extractBexpr(const shared_ptr<ASTNode>& bexprNode, vector<shared_ptr<ASTNode>>& bexprList) {
+    if (!bexprNode) return;
+
+    // Add vars to list
+    if (bexprNode->nodeType == "T_IDENTIFIER" || bexprNode->nodeType == "T_INT") bexprList.push_back(bexprNode);
+
+    // Recurse
+    for (const auto& child: bexprNode->children) extractBexpr(child, bexprList);
 }
 
 // Generates symbol table from parse tree:
@@ -987,98 +993,48 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
      * - both operands should be K/T_INT
     */
     if (node->nodeType == "statement" && node->children[1]->nodeType == "bexpr") {
-        auto bexprNode = node->children[1];
-        ASTNode var1;
-        ASTNode var2;
-
-        /** First operand is T_IDENTIFIER
-         * Set var1 to bexpr->bterm->bfactor->expr->term->factor->id->T_IDENTIFIER
-         * Set var2 to either
-         * - Case A: if expr->term then var2 = bexpr->bterm->bfactor[2]=expr->term->factor->id-T_IDENTIFIER
-         * - Case B: if expr->T_INT then var2 = bexpr->bterm->bfactor[2]=expr->T_INT
-        */
-        if (bexprNode->children.front()->nodeType == "bterm" && bexprNode->children.front()->children.front()->children.front()->nodeType == "expr") {
-            var1 = *bexprNode->children.front()->children.front()->children.front()->children.front()->children.front()->children.front()->children.front();
-            if (bexprNode->children.front()->children.front()->children[2]->children.front()->nodeType == "term") {
-                var2 = *bexprNode->children.front()->children.front()->children[2]->children.front()->children.front()->children.front()->children.front();
-            } else var2 = *bexprNode->children.front()->children.front()->children[2]->children.front();
-        }
-
-        else if (bexprNode->children.front()->nodeType == "bterm" && bexprNode->children.front()->children.front()->children.front()->nodeType != "expr") {
-            auto bfactorNode = bexprNode->children.front()->children.front()->children[1]->children.front()->children.front();
-            var1 = *bfactorNode->children.front()->children.front()->children.front()->children.front()->children.front();
-            var2 = *bfactorNode->children[2]->children.front();
-        }
-
-        // First operand is T_INT
-        else if (bexprNode->children.front()->nodeType == "T_INT") {
-            var1 = *bexprNode->children.front();
-            var2 = *bexprNode->children[2]->children.front()->children.front()->children.front()->children.front();
-        }
-
-        cout << "Var 1: " << var1.value << ", Var 2: " << var2.value << endl; 
+        vector<shared_ptr<ASTNode>> bexprList;
 
         // If Scope is function --> get symbol entry and function table
         if (scope != "global") {
             auto functionEntry = table->findEntry(scope);
             auto functionTable = functionEntry->childTable;
 
-            // Check Semantics
-            if (var1.nodeType == "T_IDENTIFIER") {
-                // If var exists in function table and is K_INT --> valid, else --> type error
-                if (functionTable->findEntry(var1.value)) {
-                    auto varEntry = functionTable->findEntry(var1.value);
-                    if (varEntry->type != "K_INT") errorFile << "Type Error at " << var1.value << " in " << scope << endl;
-                }
-                // Check for var in function params
-                else {
-                    bool found = false;
-                    for (const auto& p : functionEntry->params) {
-                        if (p.second == var1.value) {
-                            found = true; 
-                            if (p.first != "K_INT") errorFile << "Type Error at " << var1.value << " in " << scope << endl;
-                            break;
-                        }
-                    }
-                    if (!found) errorFile << "Declaration Error at " << var1.value << " in " << scope << endl;
-                }
-            }
+            extractBexpr(node->children[1], bexprList); // Extract operands from boolean expression
 
-            if (var2.nodeType == "T_IDENTIFIER") {
-                // If var exists in function table and is K_INT --> valid, else --> type error
-                if (functionTable->findEntry(var2.value)) {
-                    auto varEntry = functionTable->findEntry(var2.value);
-                    if (varEntry->type != "K_INT") errorFile << "Type Error at " << var2.value << " in " << scope << endl;
+            // Perform Semantic checking
+            for (const auto& var : bexprList) {
+                if (functionTable->findEntry(var->value)) {
+                    auto varEntry = functionTable->findEntry(var->value);
+                    if (varEntry->type != "K_INT") errorFile << "Type Error at " << var->value << " in " << scope << endl;
                 }
-                // Check for var in function params
+                else if (var->nodeType == "T_INT") continue;
                 else {
                     bool found = false;
                     for (const auto& p : functionEntry->params) {
-                        if (p.second == var2.value) {
+                        if (p.second == var->value) {
                             found = true; 
-                            if (p.first != "K_INT") errorFile << "Type Error at " << var2.value << " in " << scope << endl;
+                            if (p.first != "K_INT") errorFile << "Type Error at " << var->value << " in " << scope << endl;
                             break;
                         }
                     }
-                    if (!found) errorFile << "Declaration Error at " << var2.value << " in " << scope << endl;
+                    if (!found) errorFile << "Declaration Error at " << var->value << " in " << scope << endl;
                 }
             }
         }
 
         // Global Scope --> get symbol entries
         else {
-            if (var1.nodeType == "T_IDENTIFIER") {
-                if (table->findEntry(var1.value)) {
-                    auto varEntry = table->findEntry(var1.value);
-                    if (varEntry->type != "K_INT") errorFile << "Type Error at " << var1.value << " in " << scope << endl;
-                } else errorFile << "Declaration Error at " << var1.value << " in " << scope << endl;
-            }
-
-            if (var2.nodeType == "T_IDENTIFIER") {
-                if (table->findEntry(var2.value)) {
-                    auto varEntry = table->findEntry(var2.value);
-                    if (varEntry->type != "K_INT") errorFile << "Type Error at " << var2.value << " in " << scope << endl;
-                } else errorFile << "Declaration Error at " << var2.value << " in " << scope << endl;
+            extractBexpr(node->children[1], bexprList); // Extract operands from boolean expression
+            
+            // Perform Semantic checking
+            for (const auto& var : bexprList) {
+                if (table->findEntry(var->value)) {
+                    auto varEntry = table->findEntry(var->value);
+                    if (varEntry->type != "K_INT") errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                }
+                else if (var->nodeType == "T_INT") continue;
+                else errorFile << "Declaration Error at " << var->value << " in " << scope << endl;
             }
         }
     }
@@ -1099,7 +1055,7 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
             auto functionEntry = table->findEntry(scope);
             auto functionTable = functionEntry->childTable;
 
-            // Check for var in function scope or function params --> else declaration error
+            // Check for first var in function scope or function params --> else declaration error
             if (functionTable->findEntry(varList.front()->value)) {
                 auto varEntry = functionTable->findEntry(varList.front()->value);
                 stmtType = varEntry->type;
@@ -1119,11 +1075,16 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
         
             // Extract expression vars and perform semantic checks (scope then type)
             extractExpr(node->children[2], varList);
-            for (const auto& var : varList){
-                // Check for var in function scope or function params --> else declaration error
+            for (const auto& var : varList) {
+                // Check for var in function scope, or if var is a int/double literal or function params --> else declaration error
                 if (functionTable->findEntry(var->value)) {
                     auto varEntry = functionTable->findEntry(var->value);
                     if (varEntry->type != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                } 
+                else if (var->nodeType == "T_INT" || var->nodeType == "T_DOUBLE") {
+                    if (var->nodeType == "T_INT" && stmtType == "K_INT") continue;
+                    else if (var->nodeType == "T_DOUBLE" && stmtType == "K_DOUBLE") continue;
+                    else errorFile << "Type Error at " << var->value << " in " << scope << endl;
                 }
                 // Check for var in function params
                 else {
@@ -1140,7 +1101,28 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
             }
         }
 
+        else {
+            // Check for first var global scope and assign statement type
+            if (table->findEntry(varList.front()->value)) {
+                auto varEntry = table->findEntry(varList.front()->value);
+                stmtType = varEntry->type;
+            } else errorFile << "Declaration Error at " << varList.front()->value << " in " << scope << endl;
 
+            // Extract expression vars and perform semantic checks (scope then type)
+            extractExpr(node->children[2], varList);
+            for (const auto& var : varList) {
+                if (table->findEntry(var->value)) {
+                    auto varEntry = table->findEntry(var->value);
+                    if (varEntry->type != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                } 
+                else if (var->nodeType == "T_INT" || var->nodeType == "T_DOUBLE") {
+                    if (var->nodeType == "T_INT" && stmtType == "K_INT") continue;
+                    else if (var->nodeType == "T_DOUBLE" && stmtType == "K_DOUBLE") continue;
+                    else errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                }
+                else errorFile << "Declaration Error at " << var->value << " in " << scope << endl;
+            }
+        }
     }
     
     // Process all nodes

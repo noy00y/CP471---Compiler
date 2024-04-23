@@ -3,7 +3,7 @@ int r;
 if a<0 then a = a fi;
 if 0<b then b = b fi;
 
-if a<b then r=a; a=b; b=r fi;
+if a<b and b < r then r=a; a=b; b=r fi;
 while (b<>0) do
 	r = f * n + a + o % b * q + c - z;
 	a=b;

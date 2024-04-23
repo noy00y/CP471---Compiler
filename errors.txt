@@ -1,5 +1,15 @@
+Type Error at r in gcd
+Type Error at a in gcd
+Type Error at r in gcd
 Declaration Error at f in gcd
 Declaration Error at n in gcd
+Type Error at a in gcd
 Declaration Error at o in gcd
+Type Error at b in gcd
 Declaration Error at q in gcd
 Declaration Error at c in gcd
+Type Error at z in gcd
+Type Error at r in gcd
+Type Error at gcd in global
+Type Error at gcd in global
+Type Error at gcd in global
