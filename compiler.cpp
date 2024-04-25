@@ -819,7 +819,7 @@ void loadLL1() {
     ll1table[{"id", "T_IDENTIFIER"}] = {"T_IDENTIFIER"};
 }
 
-// Recursively Extract params from ast
+// Functions for extracting various ASTNode branches:
 void extractParams(const shared_ptr<ASTNode>& paramsNode, vector<pair<string, string>>& parameters) {
     if (!paramsNode) return;
 
@@ -845,7 +845,6 @@ void extractParams(const shared_ptr<ASTNode>& paramsNode, vector<pair<string, st
     }
 }
 
-// Functions for extracting various ASTNode branches:
 void extractVars(const shared_ptr<ASTNode>& varlistNode, const shared_ptr<SymbolTable>& table, string type) {
     if (!varlistNode) return;
 
@@ -900,7 +899,6 @@ void extractArgs(const shared_ptr<ASTNode>& argNode, vector<vector<shared_ptr<AS
         argList.push_back(arg); 
         arg.clear();
     }
-
 
     // Push back current arg if empty expression
     else if (argNode->nodeType == "exprseqp" && argNode->children.front()->nodeType == "ε") {
@@ -1136,7 +1134,7 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
                                     if (a->nodeType == "T_IDENTIFIER") {
                                         if (functionTable->findEntry(a->value)) {
                                             auto argEntry = functionTable->findEntry(a->value);
-                                            if (argEntry->returnType != pType) errorFile << "Error: Type Mismatch in Function Call at " << a->value << " in " << scope << endl;
+                                            if (argEntry->type != pType) errorFile << "Error: Type Mismatch in Function Call at " << a->value << " in " << scope << endl;
                                         }
                                         else {
                                             bool found = false;
@@ -1154,7 +1152,6 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
                                 }
                             }
                         }
-                        cout << "Done getting args" << endl;
                         break;
                     }
                     else if (varEntry->type != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl;
@@ -1191,8 +1188,48 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
             for (const auto& var : varList) {
                 if (table->findEntry(var->value)) {
                     auto varEntry = table->findEntry(var->value);
+                    // If expression var is a function declaration --> extract args and perform sematic check
                     if (varEntry->type == "K_DEF") {
-                        if (varEntry->returnType != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                        if (varEntry->returnType != stmtType) errorFile << "Type Error: Function " << var->value << " does not return " << stmtType << " in " << scope << endl;
+                        vector<vector<shared_ptr<ASTNode>>> argList; // entire function argument
+                        vector<shared_ptr<ASTNode>> arg; // indivdual args
+                        auto argNode = var->parent.lock()->parent.lock()->children[1]->children[1];
+                        extractArgs(argNode, argList, arg);
+
+                        /**
+                         * Semantic Check on function args
+                         * - Check for num of params
+                         * - compare the return type of each param and argNode in argList
+                        */
+                        if (varEntry->params.size() != argList.size()) errorFile << "Error: Mismatch in function call params " << varEntry->varName << " in " << scope << endl;
+                        else {
+                            for (size_t i = 0; i < varEntry->params.size(); i++) {
+                                const auto& pType = varEntry->params[i].first; // current function param
+                                const auto& arg = argList[i]; // list of vars in current arg
+
+                                // Perform semantic on each var in arg
+                                for (const auto& a: arg) {
+                                    // lookup arg in symbol table and then compare p with a type
+                                    // or if its a T_INT, double handle accordingly
+
+                                    // If Arg is a identifier --> look for it in either function table or params and perform semantic check on type 
+                                    if (a->nodeType == "T_IDENTIFIER") {
+                                        if (table->findEntry(a->value)) {
+                                            auto argEntry = table->findEntry(a->value);
+                                            if (argEntry->type != pType) errorFile << "Error: Type Mismatch in Function Call at " << a->value << " in " << scope << endl;
+                                        }
+                                        else errorFile << "Declaration Error at " << a->value << " in function call in " << scope << endl;
+                                        
+                                    }
+                                    else if (a->nodeType == "T_INT" || a->nodeType == "T_DOUBLE") {
+                                        if (a->nodeType == "T_INT" && pType == "K_INT") continue;
+                                        else if (a->nodeType == "T_DOUBLE" && pType == "K_DOUBLE") continue;
+                                        else errorFile << "Type Error at " << a->value << " in function call in " << scope << endl;
+                                    }
+                                }
+                            }
+                        }
+                        break;
                     }
                     else if (varEntry->type != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl;
                 } 
@@ -1205,7 +1242,89 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
             }
         }
     }
-    
+
+    else if (node->nodeType == "statement" && node->children.front()->nodeType == "K_RETURN" && scope != "global") {
+        vector<shared_ptr<ASTNode>> varList;
+        auto functionEntry = table->findEntry(scope);
+        auto functionTable = functionEntry->childTable;
+        string stmtType = functionEntry->returnType;
+        // Extract Expression vars and perform semantic checks
+        extractExpr(node->children[1], varList);
+        for (const auto& var : varList) {
+            // Check for var in function scope, or if var is a int/double literal or function params --> else declaration error
+            if (functionTable->findEntry(var->value)) {
+                auto varEntry = functionTable->findEntry(var->value);
+                
+                // If expression var is a function declaration --> extract args and perform sematic check
+                if (varEntry->type == "K_DEF") {
+                    if (varEntry->returnType != stmtType) errorFile << "Type Error: Function " << var->value << " does not return " << stmtType << " in " << scope << endl;
+                    vector<vector<shared_ptr<ASTNode>>> argList; // entire function argument
+                    vector<shared_ptr<ASTNode>> arg; // indivdual args
+                    auto argNode = var->parent.lock()->parent.lock()->children[1]->children[1];
+                    extractArgs(argNode, argList, arg);
+
+                    /**
+                     * Semantic Check on function args
+                     * - Check for num of params
+                     * - compare the return type of each param and argNode in argList
+                    */
+                    if (varEntry->params.size() != argList.size()) errorFile << "Error: Mismatch in function call params " << varEntry->varName << " in " << scope << endl;
+                    else {
+                        for (size_t i = 0; i < varEntry->params.size(); i++) {
+                            const auto& pType = varEntry->params[i].first; // current function param
+                            const auto& arg = argList[i]; // list of vars in current arg
+
+                            // Perform semantic on each var in arg
+                            for (const auto& a: arg) {
+                                // lookup arg in symbol table and then compare p with a type
+                                // or if its a T_INT, double handle accordingly
+
+                                // If Arg is a identifier --> look for it in either function table or params and perform semantic check on type 
+                                if (a->nodeType == "T_IDENTIFIER") {
+                                    if (functionTable->findEntry(a->value)) {
+                                        auto argEntry = functionTable->findEntry(a->value);
+                                        if (argEntry->returnType != pType) errorFile << "Error: Type Mismatch in Function Call at " << a->value << " in " << scope << endl;
+                                    }
+                                    else {
+                                        bool found = false;
+                                        for (const auto& p : functionEntry->params) {
+                                            if (p.second == a->value) {found = true; break;}
+                                        }
+                                        if (!found) errorFile << "Declaration Error at " << a->value << " in function call in " << scope << endl;
+                                    }
+                                }
+                                else if (a->nodeType == "T_INT" || a->nodeType == "T_DOUBLE") {
+                                    if (a->nodeType == "T_INT" && pType == "K_INT") continue;
+                                    else if (a->nodeType == "T_DOUBLE" && pType == "K_DOUBLE") continue;
+                                    else errorFile << "Type Error at " << a->value << " in function call in " << scope << endl;
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+                else if (varEntry->type != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl;
+            } 
+            else if (var->nodeType == "T_INT" || var->nodeType == "T_DOUBLE") {
+                if (var->nodeType == "T_INT" && stmtType == "K_INT") continue;
+                else if (var->nodeType == "T_DOUBLE" && stmtType == "K_DOUBLE") continue;
+                else errorFile << "Type Error at " << var->value << " in " << scope << endl;
+            }
+            // Check for var in function params
+            else {
+                bool found = false;
+                for (const auto& p : functionEntry->params) {
+                    if (p.second == var->value) {
+                        found = true; 
+                        if (p.first != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                        break;
+                    }
+                }
+                if (!found) errorFile << "Declaration Error at " << var->value << " in " << scope << endl;
+            }
+        }
+    }
+
     // Process all nodes
     for (auto& child: node->children) {
         semanticAnalysis(child, table);

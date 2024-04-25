@@ -50,6 +50,8 @@
 <b, T_IDENTIFIER>
 <-, K_MINUS>
 <a, T_IDENTIFIER>
+<,, K_COMMA>
+<a, T_IDENTIFIER>
 <), K_RPAREN>
 <), K_RPAREN>
 <fi, K_FI>
