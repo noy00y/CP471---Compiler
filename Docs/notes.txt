@@ -1,12 +1,85 @@
-Semantic Analysis:
-- to ensure declarations and statements in the code is semantically correct (ie. is it compileable)
-- utilizes ast and symbol table
-- Key tasks performed
-    - type checking: each operator has the same operands (eg. double with double) or operand has correct assignmentSD
-    - checking semantic errors: type mismatches, undeclared variables, reserved keyword misuse
+3TAC Conversion Eg:
+
+Source Code
+def int gcd(int a, int b)
+if (a==b)
+then return (a)
+fi;
+if (a>b)
+then return(gcd(a-b,b))
+else
+return(gcd(a,b-a))
+fi;
+fed;
+print gcd(21,15);
+print 45;
+print 2*(gcd(21, 28) + 6).
+
+3TAC
+B main
+
+gcd: 24 
+Begin:
+push {LR}
+push {FP}
+b = fp + 8
+a = fp + 12
+cmp a, b
+beq lab1
+bgt lab2:
+b lab3
+lab1:
+fp-4 = a
+b exitgcd
+lab2:
+t1 = a – b
+push {t1}
+push {b}
+t2 = BL gcd
+pop {b}
+pop {t1}
+fp – 4 = t2
+b exitgcd
+lab 3:
+t3 = b – a
+push {a}
+push {t3}
+t4 = BL gcd
+pop {t3}
+pop {b}
+fp – 4 = t3
+b exitgcd
+exitgcd:
+pop {FP}
+pop {PC}
+
+main:
+Begin: 44 [number of bytes]
+t1 = 21
+t2 = 15
+push {t1}
+push {t2}
+t3 = BL gcd [alternatively, fetch t3 from stack.]
+pop {t2}
+pop {t1}
+print(t3)
+t4 = 45
+print(t4)
+t5 = 21
+t6 = 28
+push {t5}
+push {t6}
+t7 = BL gcd
+pop {t6}
+pop {t5}
+t8 = 6
+t9 = t7 + t8
+t10 = 2
+t11 = t10*t9
+print(t11)
 
 TODO:
-- do semantic anaylsis and phase 4 first
+- intermediate code generation
 - add panic mode
 
 Debugging:
@@ -18,3 +91,7 @@ Debugging:
     - Test 7
     - Test 8
     - Test 9
+
+
+- pipeline, backend, fullstack
+- leetcode
