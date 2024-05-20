@@ -45,6 +45,12 @@ LL1table ll1table;
 // Semantic Analysis
 string scope = "global";
 
+// Intermediate Code Gen
+ofstream ICGFile; // output file for intermediate code
+// int tempNum = 1; // t1, t2, t3, etc...
+// int labelNum = 1; // lab1, lab2, etc...
+// int loopNum = 1; // loop1, loop2, etc..
+
 /* Structs and Enums*/
 enum TokenType {
     // General
@@ -487,8 +493,11 @@ void recursiveDecent(const string& currProd, shared_ptr<ASTNode> currentNode, sh
 
     auto productions = ll1table[{currProd, tokenType}]; // Get production vector from <nonTerminal, tokenType> pair
     if (productions.empty()) {
-        printAST(debugRoot);
-        throw runtime_error("Syntax Error: No production for " + currProd + " and " + tokenType + "\n"); // If blank production --> throw error
+        // printAST(debugRoot);
+        errorFile << "Syntax Error: No production for " << currProd << " and " << tokenType << endl; // If blank production --> log error
+        currentNode->value = "Syntax Error for --> " + tokenVal + " ";
+        parseTokens();
+        recursiveDecent(currProd, currentNode, debugRoot);
     }
 
     /**
@@ -819,7 +828,17 @@ void loadLL1() {
     ll1table[{"id", "T_IDENTIFIER"}] = {"T_IDENTIFIER"};
 }
 
-// Functions for extracting various ASTNode branches:
+/**
+ * AST Parsing Functions (DFS)
+ * - Building Symbol Table
+ *    - getting function params
+ *    - getting variable declarations
+ * - Semantic Analysis (return list of node types for analysis)
+ *    - regular expressions
+ *    - boolean expressions
+ *    - arguments from function calls
+*/
+// Building symbol table:
 void extractParams(const shared_ptr<ASTNode>& paramsNode, vector<pair<string, string>>& parameters) {
     if (!paramsNode) return;
 
@@ -866,6 +885,7 @@ void extractVars(const shared_ptr<ASTNode>& varlistNode, const shared_ptr<Symbol
     }
 }
 
+// Performing Semantic Analysis
 void extractExpr(const shared_ptr<ASTNode>& exprNode, vector<shared_ptr<ASTNode>>& varList) {
     if (!exprNode) return;
 
@@ -876,14 +896,17 @@ void extractExpr(const shared_ptr<ASTNode>& exprNode, vector<shared_ptr<ASTNode>
     for (const auto& child : exprNode->children) extractExpr(child, varList);
 }
 
-void extractBexpr(const shared_ptr<ASTNode>& bexprNode, vector<shared_ptr<ASTNode>>& bexprList) {
+void extractBexpr(const shared_ptr<ASTNode>& bexprNode, vector<shared_ptr<ASTNode>>& bexprList, string& comp) {
     if (!bexprNode) return;
 
     // Add vars to list
     if (bexprNode->nodeType == "T_IDENTIFIER" || bexprNode->nodeType == "T_INT") bexprList.push_back(bexprNode);
 
+    // Get comp type:
+    if (bexprNode->nodeType == "comp") comp = bexprNode->children.front()->nodeType;
+
     // Recurse
-    for (const auto& child: bexprNode->children) extractBexpr(child, bexprList);
+    for (const auto& child: bexprNode->children) extractBexpr(child, bexprList, comp);
 }
 
 void extractArgs(const shared_ptr<ASTNode>& argNode, vector<vector<shared_ptr<ASTNode>>>& argList, vector<shared_ptr<ASTNode>>& arg) {
@@ -985,7 +1008,7 @@ shared_ptr<ASTNode> syntaxAnalysis() {
     auto root = make_shared<ASTNode>("S'"); // Start of tree
     // Start syntax analysis if parsing if first production is correct:
     parseTokens();
-    if (ll1table[{"S'", tokenType}].empty()) throw runtime_error("Syntax Error: No matching production found");
+    if (ll1table[{"S'", tokenType}].empty()) errorFile << "Syntax Error: No matching production found" << endl;
     else recursiveDecent("S'", root, root); 
 
     printAST(root);
@@ -1025,8 +1048,9 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
         if (scope != "global") {
             auto functionEntry = table->findEntry(scope);
             auto functionTable = functionEntry->childTable;
+            string comp;
 
-            extractBexpr(node->children[1], bexprList); // Extract operands from boolean expression
+            extractBexpr(node->children[1], bexprList, comp); // Extract operands from boolean expression
 
             // Perform Semantic checking
             for (const auto& var : bexprList) {
@@ -1051,7 +1075,8 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
 
         // Global Scope --> get symbol entries
         else {
-            extractBexpr(node->children[1], bexprList); // Extract operands from boolean expression
+            string comp;
+            extractBexpr(node->children[1], bexprList, comp); // Extract operands from boolean expression
             
             // Perform Semantic checking
             for (const auto& var : bexprList) {
@@ -1231,7 +1256,9 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
                         }
                         break;
                     }
-                    else if (varEntry->type != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl;
+                    else if (varEntry->type != stmtType) errorFile << "Type Error at " << var->value << " in " << scope << endl; 
+                    
+                    
                 } 
                 else if (var->nodeType == "T_INT" || var->nodeType == "T_DOUBLE") {
                     if (var->nodeType == "T_INT" && stmtType == "K_INT") continue;
@@ -1331,9 +1358,108 @@ void semanticAnalysis(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
     }
 }
 
-// Generate intermediate code for compiling
-void create3TAC() {
+// Functions for Recursively returning 3TAC information:
+void ICG_K_IF(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table, vector<string>& header3TAC, vector<string> body3TAC, int& labNum) {
+    if (!node) return;
 
+    // Append header and body of each K_IF to recursed 3TACS
+    if (node->nodeType == "statement" && node->children.front()->nodeType == "K_IF") {
+        string comp;
+        vector<shared_ptr<ASTNode>> bexprList; 
+        extractBexpr(node->children[1], bexprList, comp);
+
+        // Get Branch Equality
+        string branchEquality;
+        if (comp == "K_LS_EQL") branchEquality = "BLE";
+        else if (comp == "K_NOT_EQL") branchEquality = "BNE";
+        else if (comp == "K_LS_THEN") branchEquality = "BLE";
+        else if (comp == "K_EQL_TO") branchEquality = "BEQ";
+        else if (comp == "K_GR_EQL") branchEquality = "BGE";
+        else if (comp == "K_GT_THEN") branchEquality = "BGT";
+
+        // Append to Header:
+        string icg = branchEquality + " lab" + to_string(labNum);
+        header3TAC.push_back(icg);
+        labNum += 1;
+
+        // Build Label Body:
+        // If Body
+        if (node->children[3]->children.front()->nodeType == "statement") {
+            if (node->children[3]->children.front()->children.front()->nodeType == "K_RETURN") {
+
+            }
+        }
+        // Else Body
+        if (node->children[4]->children.front()->nodeType == "K_ELSE") {
+
+        }
+        // ICG_LAB(node->children[3], ) IF
+        // ICG_LAB(node->children[4]) ELSE
+    }
+
+    // Recurse:
+    for (auto& child: node->children) {
+        ICG_K_IF(child, table, header3TAC, body3TAC, labNum);
+    }
+}
+
+// Generate intermediate code for compiling
+void createICG(shared_ptr<ASTNode> node, shared_ptr<SymbolTable> table) {
+
+    if (!node) return;
+
+    // Generate Function ICG(s) if they exist
+    if (node->nodeType == "fdec") {
+
+        // Get Function Information
+        // node->children[2]->children.front()->children.front()->value
+        auto functionEntry = table->findEntry(node->children[2]->children.front()->children.front()->value);
+        auto functionTable = functionEntry->childTable;
+
+        // Incrementation Vals
+        int bytesRequired = 0; // total bytes required by function
+        int labelNum = 1; // lab1, lab2, etc...
+        int loopNum = 1; // loop1, loop2, etcc...
+
+        // Printing Declarations
+        vector<string> printFuncDecls; // gcd: 24 Begin, push lr and push fp, exitgcd
+        vector<string> printFuncParams; // b = fp + 8, a = fp + 12
+        vector<string> funcHeader3TAC; // header for 3TAC --> BEQ lab1, BLT loop1
+        vector<string> funcBodyTAC; // body of 3TAC command --> lab and loops
+        
+        // Get function params:
+        int fpCounter = 8;
+        for (const auto& p : functionEntry->params) {
+            string param;
+            string tempCounter = to_string(fpCounter);
+            
+            // param = p.second + " = fp + " + tempCounter + "\n";
+            printFuncParams.push_back(param);
+        }
+
+        // Handle 3TAC --> K_IF:
+        vector<string> K_IF_Header3TAC;
+        vector<string> K_IF_Body3TAC;
+
+        ICG_K_IF(node, table, K_IF_Header3TAC, K_IF_Body3TAC, labelNum);
+
+        // Handle 3TAC --> K_WHILE:
+        // vector<string> K_WHILE_Header3TAC;
+        // vector<string> K_WHILE_Body3TAC;
+
+        // ICG_K_WHILE(node, table, K_IF_Header3TAC, K_IF_Body3TAC, labelNum);
+
+        // Append to function header and body
+        funcHeader3TAC.insert(funcHeader3TAC.end(), K_IF_Header3TAC.begin(), K_IF_Header3TAC.end());
+        funcBodyTAC.insert(funcBodyTAC.end(), K_IF_Body3TAC.begin(), K_IF_Body3TAC.end());
+
+
+    }
+
+    // // Process all nodes:
+    for (auto& child: node->children) {
+        createICG(child, table);
+    }
 }
 
 int main() {
@@ -1375,6 +1501,15 @@ int main() {
 
     // Phase 3: Perform semantic analysis
     semanticAnalysis(root, symbolTable);
+
+    // Phase 4: Intermediate Code Gen (only do this if code is semantically correct)
+    bool isEmpty = errorFile.tellp() == 0;
+    if (isEmpty) {
+        ICGFile.open("compile.txt");
+        ICGFile << "B main" << endl;
+        createICG(root, symbolTable);
+    } 
+    else cout << "Source File is invalid" << endl;
 
     return 0;
 }
